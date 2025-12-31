@@ -9,6 +9,8 @@ import { ObjectiveCard } from "@/components/ObjectiveCard";
 import { TodoItem } from "@/components/TodoItem";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const session = await auth();
   const userId = session!.user!.id!;

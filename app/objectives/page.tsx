@@ -4,6 +4,8 @@ import { Navbar } from "@/components/Navbar";
 import { ObjectiveCard } from "@/components/ObjectiveCard";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export default async function ObjectivesPage() {
   const session = await auth();
   const objectivesWithGoals = await getObjectivesWithGoals(session!.user!.id!);
