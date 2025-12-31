@@ -98,7 +98,7 @@ export function MilestoneForm({
           <select
             value={type}
             onChange={(e) => setType(e.target.value as "quarterly" | "monthly")}
-            className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option value="quarterly">Quarterly</option>
             <option value="monthly">Monthly</option>
@@ -113,7 +113,7 @@ export function MilestoneForm({
             name="quarter"
             value={quarter}
             onChange={(e) => setQuarter(parseInt(e.target.value))}
-            className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option value={1}>Q1 (Jan-Mar)</option>
             <option value={2}>Q2 (Apr-Jun)</option>
@@ -130,7 +130,7 @@ export function MilestoneForm({
           </label>
           <select
             name="month"
-            className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             {getMonthsForQuarter(quarter).map((month) => {
               const monthDate = new Date(currentYear, month - 1, 1);
@@ -160,7 +160,7 @@ export function MilestoneForm({
           name="title"
           required
           maxLength={200}
-          className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           placeholder="e.g., Complete training plan"
         />
       </div>
@@ -177,7 +177,7 @@ export function MilestoneForm({
           name="description"
           rows={2}
           maxLength={1000}
-          className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           placeholder="Optional description..."
         />
       </div>
@@ -195,7 +195,7 @@ export function MilestoneForm({
           name="dueDate"
           required
           defaultValue={getDefaultDueDate()}
-          className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
       </div>
 

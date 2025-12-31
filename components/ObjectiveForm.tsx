@@ -81,7 +81,7 @@ export function ObjectiveForm({ objective, onSuccess }: ObjectiveFormProps) {
           required
           maxLength={200}
           defaultValue={objective?.title || ""}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           placeholder="e.g., Become a better runner"
         />
       </div>
@@ -99,7 +99,7 @@ export function ObjectiveForm({ objective, onSuccess }: ObjectiveFormProps) {
           rows={4}
           maxLength={1000}
           defaultValue={objective?.description || ""}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           placeholder="Describe your objective in more detail..."
         />
       </div>

@@ -85,7 +85,7 @@ export function CheckInForm({ onSuccess }: CheckInFormProps) {
           required
           rows={4}
           maxLength={5000}
-          className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           placeholder="List your achievements, completed tasks, and progress made..."
         />
       </div>
@@ -103,7 +103,7 @@ export function CheckInForm({ onSuccess }: CheckInFormProps) {
           required
           rows={4}
           maxLength={5000}
-          className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           placeholder="Describe any obstacles, setbacks, or difficulties you encountered..."
         />
       </div>
@@ -122,7 +122,7 @@ export function CheckInForm({ onSuccess }: CheckInFormProps) {
           required
           rows={4}
           maxLength={5000}
-          className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           placeholder="List the tasks and goals you want to focus on next week..."
         />
       </div>
