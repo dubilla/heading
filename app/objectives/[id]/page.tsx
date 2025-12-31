@@ -7,6 +7,8 @@ import { GoalCard } from "@/components/GoalCard";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 type PageProps = { params: Promise<{ id: string }> };
 
 export default async function ObjectiveDetailPage({ params }: PageProps) {

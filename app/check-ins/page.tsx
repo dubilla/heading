@@ -4,6 +4,8 @@ import { Navbar } from "@/components/Navbar";
 import { CheckInForm } from "@/components/CheckInForm";
 import { formatWeekRange, isCurrentWeek } from "@/lib/utils/week-helpers";
 
+export const dynamic = "force-dynamic";
+
 export default async function CheckInsPage() {
   const session = await auth();
   const userId = session!.user!.id!;

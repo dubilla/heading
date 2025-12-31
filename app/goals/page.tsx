@@ -4,6 +4,8 @@ import { Navbar } from "@/components/Navbar";
 import { GoalCard } from "@/components/GoalCard";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export default async function GoalsPage() {
   const session = await auth();
   const goals = await getGoalsByUserId(session!.user!.id!);
