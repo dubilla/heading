@@ -1,26 +1,182 @@
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Premium Dark Color Palette */
+  --background-primary: #0a0a0f;
+  --background-secondary: #13131a;
+  --background-tertiary: #1a1a24;
+  --background-elevated: #20202e;
+
+  /* Gold Accent System */
+  --gold-50: #fffbeb;
+  --gold-100: #fef3c7;
+  --gold-200: #fde68a;
+  --gold-300: #fcd34d;
+  --gold-400: #fbbf24;
+  --gold-500: #f59e0b;
+  --gold-600: #d97706;
+  --gold-700: #b45309;
+  --gold-800: #92400e;
+  --gold-900: #78350f;
+
+  /* Text Colors */
+  --text-primary: #f8f9fa;
+  --text-secondary: #b8bcc4;
+  --text-tertiary: #6b7280;
+  --text-accent: #fbbf24;
+
+  /* Border Colors */
+  --border-primary: rgba(255, 255, 255, 0.08);
+  --border-secondary: rgba(255, 255, 255, 0.04);
+  --border-gold: rgba(251, 191, 36, 0.2);
+
+  /* Typography */
+  --font-display: 'Crimson Pro', serif;
+  --font-body: 'DM Sans', sans-serif;
+
+  /* Effects */
+  --shadow-glow: 0 0 40px rgba(251, 191, 36, 0.1);
+  --shadow-elevation: 0 20px 60px -10px rgba(0, 0, 0, 0.6);
+  --shadow-premium: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--background-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Smooth Scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection Styling */
+::selection {
+  background-color: var(--gold-500);
+  color: var(--background-primary);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--background-elevated);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold-700);
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Utility Classes */
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, var(--gold-300) 0%, var(--gold-500) 50%, var(--gold-700) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.bg-gradient-dark {
+  background: linear-gradient(135deg, var(--background-secondary) 0%, var(--background-primary) 100%);
+}
+
+.bg-gradient-gold {
+  background: linear-gradient(135deg, var(--gold-500) 0%, var(--gold-600) 100%);
+}
+
+.border-gradient-gold {
+  border: 1px solid transparent;
+  background: linear-gradient(var(--background-elevated), var(--background-elevated)) padding-box,
+              linear-gradient(135deg, var(--gold-500), var(--gold-700)) border-box;
+}
+
+/* Glass Morphism Effect */
+.glass {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-primary);
 }
