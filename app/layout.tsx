@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Compass - AI-Powered Annual Goal Planning",
+  title: "Heading - AI-Powered Annual Goal Planning",
   description:
     "Turn your annual goals into actionable daily tasks with AI-powered planning assistance.",
 };

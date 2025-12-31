@@ -20,51 +20,98 @@ export function Navbar({ userName }: NavbarProps) {
   ];
 
   return (
-    <nav className="bg-white border-b border-gray-200">
+    <nav
+      style={{
+        background: "var(--background-secondary)",
+        borderBottom: "1px solid var(--border-primary)",
+        backdropFilter: "blur(20px)",
+      }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
-            <Link href="/dashboard" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-3 cursor-pointer"
+            >
+              <div
+                className="w-9 h-9 bg-gradient-gold rounded-lg flex items-center justify-center"
+                style={{ boxShadow: "var(--shadow-glow)" }}
+              >
                 <svg
-                  className="w-5 h-5 text-white"
+                  className="w-5 h-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  style={{ color: "var(--background-primary)" }}
                 >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                    strokeWidth={2.5}
+                    d="M5 10l7-7m0 0l7 7m-7-7v18"
                   />
                 </svg>
               </div>
-              <span className="text-xl font-bold text-gray-900">Compass</span>
+              <span
+                className="text-xl font-bold tracking-tight"
+                style={{
+                  fontFamily: "var(--font-display)",
+                  color: "var(--text-primary)",
+                }}
+              >
+                Heading
+              </span>
             </Link>
-            <div className="hidden sm:ml-8 sm:flex sm:space-x-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`inline-flex items-center px-3 py-2 text-sm font-medium ${
-                    pathname === link.href ||
-                    (link.href !== "/dashboard" &&
-                      pathname.startsWith(link.href))
-                      ? "text-blue-600 border-b-2 border-blue-600"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
+            <div className="hidden sm:ml-10 sm:flex sm:space-x-1">
+              {navLinks.map((link) => {
+                const isActive =
+                  pathname === link.href ||
+                  (link.href !== "/dashboard" &&
+                    pathname.startsWith(link.href));
+
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="cursor-pointer relative inline-flex items-center px-4 py-2 text-sm font-semibold transition-all rounded-lg"
+                    style={{
+                      color: isActive
+                        ? "var(--text-accent)"
+                        : "var(--text-secondary)",
+                      background: isActive
+                        ? "rgba(251, 191, 36, 0.1)"
+                        : "transparent",
+                    }}
+                  >
+                    {link.label}
+                    {isActive && (
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-gradient-gold rounded-full"></div>
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{userName || "User"}</span>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-8 h-8 rounded-full bg-gradient-gold flex items-center justify-center font-bold text-sm"
+                style={{ color: "var(--background-primary)" }}
+              >
+                {(userName || "U").charAt(0).toUpperCase()}
+              </div>
+              <span
+                className="text-sm font-medium hidden md:block"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                {userName || "User"}
+              </span>
+            </div>
             <button
               onClick={() => signOut({ callbackUrl: "/" })}
-              className="cursor-pointer text-sm text-gray-500 hover:text-gray-700"
+              className="cursor-pointer text-sm font-medium px-4 py-2 rounded-lg transition-all hover:bg-white/5"
+              style={{ color: "var(--text-tertiary)" }}
             >
               Sign out
             </button>
