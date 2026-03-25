@@ -1,0 +1,62 @@
+# Preview Environment Cleanup
+#
+# Deletes the Neon database branch when a PR is closed or merged.
+#
+# Required secrets:
+#   NEON_API_KEY       - Neon API key for branch management
+#   NEON_PROJECT_ID    - Neon project ID
+
+name: Preview Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  pull-requests: write
+
+env:
+  NEON_BRANCH_NAME: pr-${{ github.event.pull_request.number }}
+
+jobs:
+  cleanup:
+    name: Clean Up Preview
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete Neon database branch
+        uses: neondatabasedev/delete-branch-action@v5
+        with:
+          api_key: ${{ secrets.NEON_API_KEY }}
+          project_id: ${{ secrets.NEON_PROJECT_ID }}
+          branch_name: ${{ env.NEON_BRANCH_NAME }}
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Find and update the preview deployment comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const marker = '## Preview Deployment';
+            const existing = comments.find(c => c.body.startsWith(marker));
+
+            if (existing) {
+              const body = [
+                '## Preview Deployment',
+                '',
+                '~Preview environment has been cleaned up.~',
+                `**Neon Branch:** \`${{ env.NEON_BRANCH_NAME }}\` (deleted)',
+              ].join('\n');
+
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            }
