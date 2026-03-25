@@ -1,0 +1,90 @@
+# Create a Neon database branch for each pull request.
+# This gives every PR its own isolated Postgres instance with up-to-date
+# schema so preview deployments and CI tests can run against real data.
+
+name: Create Neon Branch
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  neon-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Create (or re-use) a Neon branch named after the PR number.
+      # The action is idempotent — reopening a PR won't duplicate branches.
+      - name: Create Neon branch
+        id: create-branch
+        uses: neondatabasedev/create-branch-action@v5
+        with:
+          project_id: ${{ secrets.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          branch_name: preview/pr-${{ github.event.pull_request.number }}
+          # Parent defaults to the project's primary branch (main/production)
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Run Drizzle migrations so the branch DB schema matches this PR's code.
+      - name: Run Drizzle migrations
+        run: npx drizzle-kit migrate
+        env:
+          DATABASE_URL: ${{ steps.create-branch.outputs.db_url_with_pooler }}
+
+      # Leave a comment on the PR with the Neon branch details.
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = [
+              '### Neon Database Branch',
+              '',
+              '| Detail | Value |',
+              '|--------|-------|',
+              `| **Branch** | \`preview/pr-${{ github.event.pull_request.number }}\` |`,
+              `| **Branch ID** | \`${{ steps.create-branch.outputs.branch_id }}\` |`,
+              '',
+              'Drizzle migrations have been applied to this branch.',
+              '',
+              '*This branch will be automatically deleted when the PR is closed.*',
+            ].join('\n');
+
+            // Update an existing comment instead of creating duplicates.
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const marker = '### Neon Database Branch';
+            const existing = comments.find(c => c.body.startsWith(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
