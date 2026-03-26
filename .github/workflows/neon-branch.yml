@@ -1,8 +1,9 @@
-# Create a Neon database branch for each pull request.
-# This gives every PR its own isolated Postgres instance with up-to-date
-# schema so preview deployments and CI tests can run against real data.
+# Run Drizzle migrations against the Neon preview branch created by the
+# native Neon-Vercel integration.  The integration handles branch creation,
+# DATABASE_URL wiring for Vercel previews, and cleanup on PR close.
+# This workflow only ensures the schema is up to date.
 
-name: Create Neon Branch
+name: Run Preview Migrations
 
 on:
   pull_request:
@@ -13,22 +14,67 @@ permissions:
   pull-requests: write
 
 jobs:
-  neon-branch:
+  migrate-preview:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Create (or re-use) a Neon branch named after the PR number.
-      # The action is idempotent — reopening a PR won't duplicate branches.
-      - name: Create Neon branch
-        id: create-branch
-        uses: neondatabase/create-branch-action@v6
-        with:
-          project_id: ${{ secrets.NEON_PROJECT_ID }}
-          api_key: ${{ secrets.NEON_API_KEY }}
-          branch_name: preview/pr-${{ github.event.pull_request.number }}
-          # Parent defaults to the project's primary branch (main/production)
+      # The Neon-Vercel integration names branches after the git branch.
+      # Wait up to ~60 s for the branch to be created (it may still be
+      # provisioning when this workflow fires).
+      - name: Look up Neon branch and connection string
+        id: neon
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          for i in 1 2 3 4 5 6; do
+            echo "Attempt $i: looking for Neon branch matching '${HEAD_BRANCH}'…"
+
+            BRANCHES=$(curl -s \
+              -H "Authorization: Bearer ${NEON_API_KEY}" \
+              "https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}/branches")
+
+            BRANCH_ID=$(echo "$BRANCHES" | jq -r \
+              --arg name "$HEAD_BRANCH" \
+              '.branches[] | select(.name == $name) | .id')
+
+            if [ -n "$BRANCH_ID" ]; then
+              echo "Found branch: $BRANCH_ID"
+              break
+            fi
+
+            if [ "$i" -eq 6 ]; then
+              echo "::error::Neon branch for '${HEAD_BRANCH}' not found after retries"
+              exit 1
+            fi
+
+            sleep 10
+          done
+
+          # Get the connection URI from the branch's endpoint.
+          ENDPOINTS=$(curl -s \
+            -H "Authorization: Bearer ${NEON_API_KEY}" \
+            "https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}/branches/${BRANCH_ID}/endpoints")
+
+          ENDPOINT_ID=$(echo "$ENDPOINTS" | jq -r '.endpoints[0].id')
+
+          PASSWORD_RESP=$(curl -s \
+            -H "Authorization: Bearer ${NEON_API_KEY}" \
+            "https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}/connection_uri?branch_id=${BRANCH_ID}&endpoint_id=${ENDPOINT_ID}&database_name=neondb&role_name=neondb_owner&pooled=true")
+
+          DATABASE_URL=$(echo "$PASSWORD_RESP" | jq -r '.uri')
+
+          if [ -z "$DATABASE_URL" ] || [ "$DATABASE_URL" = "null" ]; then
+            echo "::error::Failed to retrieve connection string for branch ${BRANCH_ID}"
+            exit 1
+          fi
+
+          echo "::add-mask::${DATABASE_URL}"
+          echo "database_url=${DATABASE_URL}" >> "$GITHUB_OUTPUT"
+          echo "branch_id=${BRANCH_ID}" >> "$GITHUB_OUTPUT"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -39,38 +85,30 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Run Drizzle migrations so the branch DB schema matches this PR's code.
       - name: Run Drizzle migrations
         run: npx drizzle-kit migrate
         env:
-          DATABASE_URL: ${{ steps.create-branch.outputs.db_url_pooled }}
+          DATABASE_URL: ${{ steps.neon.outputs.database_url }}
 
-      # Leave a comment on the PR with the Neon branch details.
       - name: Comment on PR
         uses: actions/github-script@v7
         with:
           script: |
             const body = [
-              '### Neon Database Branch',
+              '### Preview Migrations',
               '',
-              '| Detail | Value |',
-              '|--------|-------|',
-              `| **Branch** | \`preview/pr-${{ github.event.pull_request.number }}\` |`,
-              `| **Branch ID** | \`${{ steps.create-branch.outputs.branch_id }}\` |`,
+              `Drizzle migrations applied to Neon branch \`${{ steps.neon.outputs.branch_id }}\`.`,
               '',
-              'Drizzle migrations have been applied to this branch.',
-              '',
-              '*This branch will be automatically deleted when the PR is closed.*',
+              '*Branch created and managed by the Neon-Vercel integration.*',
             ].join('\n');
 
-            // Update an existing comment instead of creating duplicates.
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
             });
 
-            const marker = '### Neon Database Branch';
+            const marker = '### Preview Migrations';
             const existing = comments.find(c => c.body.startsWith(marker));
 
             if (existing) {
