@@ -40,7 +40,7 @@ jobs:
 
       - name: Create Neon database branch
         id: neon
-        uses: neondatabasedev/create-branch-action@v5
+        uses: neondatabase/create-branch-action@v6
         with:
           api_key: ${{ secrets.NEON_API_KEY }}
           project_id: ${{ secrets.NEON_PROJECT_ID }}
@@ -61,7 +61,7 @@ jobs:
       - name: Run database migrations
         run: npx drizzle-kit migrate
         env:
-          DATABASE_URL: ${{ steps.neon.outputs.db_url_with_pooler }}
+          DATABASE_URL: ${{ steps.neon.outputs.db_url_pooled }}
 
       # --- Vercel Deployment ---
 
@@ -79,13 +79,13 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          DATABASE_URL: ${{ steps.neon.outputs.db_url_with_pooler }}
+          DATABASE_URL: ${{ steps.neon.outputs.db_url_pooled }}
 
       - name: Deploy to Vercel
         id: deploy
         run: |
           DEPLOYMENT_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} \
-            --env DATABASE_URL="${{ steps.neon.outputs.db_url_with_pooler }}")
+            --env DATABASE_URL="${{ steps.neon.outputs.db_url_pooled }}")
           echo "url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
