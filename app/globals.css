@@ -53,6 +53,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Form Inputs */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  background-color: #fff;
+}
+
 /* Smooth Scrolling */
 html {
   scroll-behavior: smooth;
