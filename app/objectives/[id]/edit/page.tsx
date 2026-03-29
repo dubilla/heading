@@ -19,13 +19,17 @@ export default async function EditObjectivePage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div
+      className="min-h-screen"
+      style={{ background: "var(--background-primary)" }}
+    >
       <Navbar userName={session?.user?.name} />
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="mb-8 animate-fade-in-up">
           <Link
             href={`/objectives/${id}`}
-            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
+            className="inline-flex items-center text-sm font-medium transition-colors"
+            style={{ color: "var(--text-tertiary)" }}
           >
             <svg
               className="w-4 h-4 mr-1"
@@ -42,13 +46,28 @@ export default async function EditObjectivePage({ params }: PageProps) {
             </svg>
             Back to Objective
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900 mt-4">
+          <h1
+            className="text-3xl font-bold mt-4 mb-2"
+            style={{
+              fontFamily: "var(--font-display)",
+              color: "var(--text-primary)",
+            }}
+          >
             Edit Objective
           </h1>
-          <p className="text-gray-600 mt-1">Update your objective details.</p>
+          <p style={{ color: "var(--text-secondary)" }}>
+            Update your objective details.
+          </p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div
+          className="glass rounded-2xl p-8 animate-fade-in-up"
+          style={{
+            boxShadow: "var(--shadow-premium)",
+            border: "1px solid var(--border-primary)",
+            animationDelay: "0.1s",
+          }}
+        >
           <ObjectiveForm objective={objective} />
         </div>
       </main>
