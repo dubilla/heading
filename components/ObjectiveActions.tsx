@@ -38,7 +38,8 @@ export function ObjectiveActions({ objectiveId }: ObjectiveActionsProps) {
     <div className="relative">
       <button
         onClick={() => setShowMenu(!showMenu)}
-        className="cursor-pointer p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+        className="cursor-pointer p-2 rounded-lg transition-colors"
+        style={{ color: "var(--text-tertiary)" }}
       >
         <svg
           className="w-5 h-5"
@@ -61,10 +62,17 @@ export function ObjectiveActions({ objectiveId }: ObjectiveActionsProps) {
             className="fixed inset-0 z-10"
             onClick={() => setShowMenu(false)}
           />
-          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+          <div
+            className="absolute right-0 mt-2 w-48 glass rounded-xl z-20 overflow-hidden"
+            style={{
+              boxShadow: "var(--shadow-premium)",
+              border: "1px solid var(--border-primary)",
+            }}
+          >
             <Link
               href={`/objectives/${objectiveId}/edit`}
-              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              className="block px-4 py-3 text-sm font-medium transition-colors"
+              style={{ color: "var(--text-secondary)" }}
               onClick={() => setShowMenu(false)}
             >
               Edit Objective
@@ -72,7 +80,8 @@ export function ObjectiveActions({ objectiveId }: ObjectiveActionsProps) {
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className="cursor-pointer w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 disabled:opacity-50"
+              className="cursor-pointer w-full text-left px-4 py-3 text-sm font-medium transition-colors disabled:opacity-50"
+              style={{ color: "#f87171" }}
             >
               {deleting ? "Deleting..." : "Delete Objective"}
             </button>

@@ -62,17 +62,26 @@ export function ObjectiveForm({ objective, onSuccess }: ObjectiveFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="rounded-md bg-red-50 p-4">
-          <p className="text-sm text-red-700">{error}</p>
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "rgba(239, 68, 68, 0.1)",
+            border: "1px solid rgba(239, 68, 68, 0.3)",
+          }}
+        >
+          <p className="text-sm" style={{ color: "#f87171" }}>
+            {error}
+          </p>
         </div>
       )}
 
       <div>
         <label
           htmlFor="title"
-          className="block text-sm font-medium text-gray-700"
+          className="block text-sm font-semibold mb-2"
+          style={{ color: "var(--text-secondary)" }}
         >
-          Title <span className="text-red-500">*</span>
+          Title <span style={{ color: "#f87171" }}>*</span>
         </label>
         <input
           type="text"
@@ -81,7 +90,11 @@ export function ObjectiveForm({ objective, onSuccess }: ObjectiveFormProps) {
           required
           maxLength={200}
           defaultValue={objective?.title || ""}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="block w-full rounded-xl px-4 py-3 bg-white shadow-sm focus:outline-none focus:ring-2 transition-all"
+          style={{
+            border: "1px solid var(--border-primary)",
+            color: "var(--text-primary)",
+          }}
           placeholder="e.g., Become a better runner"
         />
       </div>
@@ -89,7 +102,8 @@ export function ObjectiveForm({ objective, onSuccess }: ObjectiveFormProps) {
       <div>
         <label
           htmlFor="description"
-          className="block text-sm font-medium text-gray-700"
+          className="block text-sm font-semibold mb-2"
+          style={{ color: "var(--text-secondary)" }}
         >
           Description
         </label>
@@ -99,23 +113,36 @@ export function ObjectiveForm({ objective, onSuccess }: ObjectiveFormProps) {
           rows={4}
           maxLength={1000}
           defaultValue={objective?.description || ""}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="block w-full rounded-xl px-4 py-3 bg-white shadow-sm focus:outline-none focus:ring-2 transition-all"
+          style={{
+            border: "1px solid var(--border-primary)",
+            color: "var(--text-primary)",
+          }}
           placeholder="Describe your objective in more detail..."
         />
       </div>
 
-      <div className="flex justify-end gap-3">
+      <div className="flex justify-end gap-3 pt-2">
         <button
           type="button"
           onClick={() => router.back()}
-          className="cursor-pointer rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="cursor-pointer rounded-xl px-5 py-2.5 text-sm font-semibold transition-all hover:scale-105"
+          style={{
+            border: "1px solid var(--border-primary)",
+            color: "var(--text-secondary)",
+            background: "transparent",
+          }}
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={loading}
-          className="cursor-pointer rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="cursor-pointer rounded-xl bg-gradient-gold px-6 py-2.5 text-sm font-bold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            color: "var(--background-primary)",
+            boxShadow: "var(--shadow-glow)",
+          }}
         >
           {loading
             ? "Saving..."
