@@ -22,19 +22,24 @@
     "db:push:prod": "NODE_ENV=production drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:studio:prod": "NODE_ENV=production drizzle-kit studio",
-    "prepare": "husky"
+    "prepare": "husky",
+    "cli": "tsx cli/index.ts",
+    "mcp": "tsx mcp/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
     "@auth/drizzle-adapter": "^1.11.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@neondatabase/serverless": "^1.0.2",
     "bcryptjs": "^3.0.3",
+    "commander": "^14.0.3",
     "drizzle-orm": "^0.45.1",
     "next": "16.1.1",
     "next-auth": "^5.0.0-beta.30",
     "pg": "^8.16.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "tsconfig-paths": "^4.2.0",
     "zod": "^4.2.1"
   },
   "devDependencies": {
@@ -58,6 +63,7 @@
     "prettier": "^3.7.4",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.6",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   },
   "lint-staged": {
