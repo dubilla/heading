@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthUserId } from "@/lib/api-auth";
 import { getTodoById, updateTodo, deleteTodo } from "@/lib/db/todos";
 import { updateTodoSchema } from "@/lib/validations/todo";
 
@@ -7,13 +7,13 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
-    const todo = await getTodoById(id, session.user.id);
+    const todo = await getTodoById(id, userId);
 
     if (!todo) {
       return NextResponse.json({ error: "Todo not found" }, { status: 404 });
@@ -31,8 +31,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -47,7 +47,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const todo = await updateTodo(id, session.user.id, parsed.data);
+    const todo = await updateTodo(id, userId, parsed.data);
 
     if (!todo) {
       return NextResponse.json({ error: "Todo not found" }, { status: 404 });
@@ -65,13 +65,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
-    const deleted = await deleteTodo(id, session.user.id);
+    const deleted = await deleteTodo(id, userId);
 
     if (!deleted) {
       return NextResponse.json({ error: "Todo not found" }, { status: 404 });

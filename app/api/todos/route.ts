@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthUserId } from "@/lib/api-auth";
 import { getTodosByUserId, createTodo } from "@/lib/db/todos";
 import { createTodoSchema } from "@/lib/validations/todo";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const completed =
       completedParam !== null ? completedParam === "true" : undefined;
 
-    const todos = await getTodosByUserId(session.user.id, {
+    const todos = await getTodosByUserId(userId, {
       goalId,
       milestoneId,
       completed,
@@ -35,8 +35,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
         description: parsed.data.description ?? null,
         dueDate: parsed.data.dueDate ?? null,
       },
-      session.user.id
+      userId
     );
 
     if (!todo) {

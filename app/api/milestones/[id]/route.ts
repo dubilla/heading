@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthUserId } from "@/lib/api-auth";
 import {
   getMilestoneById,
   updateMilestone,
@@ -11,13 +11,13 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
-    const milestone = await getMilestoneById(id, session.user.id);
+    const milestone = await getMilestoneById(id, userId);
 
     if (!milestone) {
       return NextResponse.json(
@@ -38,8 +38,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -54,7 +54,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const milestone = await updateMilestone(id, session.user.id, parsed.data);
+    const milestone = await updateMilestone(id, userId, parsed.data);
 
     if (!milestone) {
       return NextResponse.json(
@@ -75,13 +75,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
-    const deleted = await deleteMilestone(id, session.user.id);
+    const deleted = await deleteMilestone(id, userId);
 
     if (!deleted) {
       return NextResponse.json(

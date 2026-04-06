@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthUserId } from "@/lib/api-auth";
 import { getGoalById, updateGoal, deleteGoal } from "@/lib/db/goals";
 import { updateGoalSchema } from "@/lib/validations/goal";
 
@@ -7,13 +7,13 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
-    const goal = await getGoalById(id, session.user.id);
+    const goal = await getGoalById(id, userId);
 
     if (!goal) {
       return NextResponse.json({ error: "Goal not found" }, { status: 404 });
@@ -31,8 +31,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -47,12 +47,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const existingGoal = await getGoalById(id, session.user.id);
+    const existingGoal = await getGoalById(id, userId);
     if (!existingGoal) {
       return NextResponse.json({ error: "Goal not found" }, { status: 404 });
     }
 
-    const goal = await updateGoal(id, session.user.id, parsed.data);
+    const goal = await updateGoal(id, userId, parsed.data);
 
     return NextResponse.json({ data: goal });
   } catch (error) {
@@ -66,13 +66,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
-    const deleted = await deleteGoal(id, session.user.id);
+    const deleted = await deleteGoal(id, userId);
 
     if (!deleted) {
       return NextResponse.json({ error: "Goal not found" }, { status: 404 });

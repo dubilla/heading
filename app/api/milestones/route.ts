@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthUserId } from "@/lib/api-auth";
 import { createMilestone } from "@/lib/db/milestones";
 import { createMilestoneSchema } from "@/lib/validations/milestone";
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
         month: parsed.data.month ?? null,
         status: "not_started",
       },
-      session.user.id
+      userId
     );
 
     if (!milestone) {

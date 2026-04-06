@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthUserId } from "@/lib/api-auth";
 import { getObjectivesByUserId, createObjective } from "@/lib/db/objectives";
 import { createObjectiveSchema } from "@/lib/validations/objective";
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const objectives = await getObjectivesByUserId(session.user.id);
+    const objectives = await getObjectivesByUserId(userId);
     return NextResponse.json({ data: objectives });
   } catch (error) {
     console.error("Error fetching objectives:", error);
@@ -23,8 +23,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     const objective = await createObjective({
-      userId: session.user.id,
+      userId: userId,
       title: parsed.data.title,
       description: parsed.data.description ?? null,
       status: "not_started",

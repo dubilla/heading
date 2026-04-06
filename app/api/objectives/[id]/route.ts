@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthUserId } from "@/lib/api-auth";
 import {
   getObjectiveById,
   getObjectiveWithGoals,
@@ -12,8 +12,8 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const includeGoals = url.searchParams.get("includeGoals") === "true";
 
     if (includeGoals) {
-      const result = await getObjectiveWithGoals(id, session.user.id);
+      const result = await getObjectiveWithGoals(id, userId);
       if (!result) {
         return NextResponse.json(
           { error: "Objective not found" },
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ data: result });
     }
 
-    const objective = await getObjectiveById(id, session.user.id);
+    const objective = await getObjectiveById(id, userId);
     if (!objective) {
       return NextResponse.json(
         { error: "Objective not found" },
@@ -52,8 +52,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -68,7 +68,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const existingObjective = await getObjectiveById(id, session.user.id);
+    const existingObjective = await getObjectiveById(id, userId);
     if (!existingObjective) {
       return NextResponse.json(
         { error: "Objective not found" },
@@ -76,7 +76,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const objective = await updateObjective(id, session.user.id, parsed.data);
+    const objective = await updateObjective(id, userId, parsed.data);
 
     return NextResponse.json({ data: objective });
   } catch (error) {
@@ -90,13 +90,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
-    const deleted = await deleteObjective(id, session.user.id);
+    const deleted = await deleteObjective(id, userId);
 
     if (!deleted) {
       return NextResponse.json(
