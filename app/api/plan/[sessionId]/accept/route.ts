@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthUserId } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { milestones, todos } from "@/lib/db/schema";
 import { getSessionById, completeSession } from "@/lib/db/planning-sessions";
@@ -30,13 +30,13 @@ type RouteParams = { params: Promise<{ sessionId: string }> };
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { sessionId } = await params;
-    const planningSession = await getSessionById(sessionId, session.user.id);
+    const planningSession = await getSessionById(sessionId, userId);
 
     if (!planningSession) {
       return NextResponse.json(
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Complete the session
-    await completeSession(sessionId, session.user.id);
+    await completeSession(sessionId, userId);
 
     return NextResponse.json({
       data: {

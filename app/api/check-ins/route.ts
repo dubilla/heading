@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthUserId } from "@/lib/api-auth";
 import {
   getCheckInsByUserId,
   createCheckIn,
@@ -9,12 +9,12 @@ import { createCheckInSchema } from "@/lib/validations/check-in";
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const checkIns = await getCheckInsByUserId(session.user.id);
+    const checkIns = await getCheckInsByUserId(userId);
     return NextResponse.json({ data: checkIns });
   } catch (error) {
     console.error("Error fetching check-ins:", error);
@@ -27,8 +27,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     // Check if a check-in already exists for this week
     const existing = await getCheckInForWeek(
-      session.user.id,
+      userId,
       parsed.data.weekStartDate
     );
 
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     const checkIn = await createCheckIn({
-      userId: session.user.id,
+      userId: userId,
       weekStartDate: parsed.data.weekStartDate,
       accomplishments: parsed.data.accomplishments,
       challenges: parsed.data.challenges,

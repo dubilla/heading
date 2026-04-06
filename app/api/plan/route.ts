@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthUserId } from "@/lib/api-auth";
 import { getGoalById } from "@/lib/db/goals";
 import {
   getActiveSession,
@@ -18,8 +18,8 @@ const requestSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getAuthUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     const { goalId, message, sessionId } = parsed.data;
 
     // Get the goal
-    const goal = await getGoalById(goalId, session.user.id);
+    const goal = await getGoalById(goalId, userId);
     if (!goal) {
       return NextResponse.json({ error: "Goal not found" }, { status: 404 });
     }
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     // Get or create planning session
     let planningSession;
     if (sessionId) {
-      planningSession = await getSessionById(sessionId, session.user.id);
+      planningSession = await getSessionById(sessionId, userId);
       if (!planningSession) {
         return NextResponse.json(
           { error: "Planning session not found" },
@@ -52,9 +52,9 @@ export async function POST(request: NextRequest) {
         );
       }
     } else {
-      planningSession = await getActiveSession(goalId, session.user.id);
+      planningSession = await getActiveSession(goalId, userId);
       if (!planningSession) {
-        planningSession = await createSession(goalId, session.user.id);
+        planningSession = await createSession(goalId, userId);
         if (!planningSession) {
           return NextResponse.json(
             { error: "Failed to create planning session" },
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     await updateSessionMessages(
       planningSession.id,
-      session.user.id,
+      userId,
       updatedMessages
     );
 

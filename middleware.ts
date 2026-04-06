@@ -10,10 +10,19 @@ export default auth((req) => {
   const isPublicRoute = publicRoutes.includes(req.nextUrl.pathname);
   const isAuthRoute = req.nextUrl.pathname.startsWith("/auth");
   const isApiAuthRoute = req.nextUrl.pathname.startsWith("/api/auth");
+  const isApiRoute = req.nextUrl.pathname.startsWith("/api/");
 
   // Allow all API auth routes
   if (isApiAuthRoute) {
     return NextResponse.next();
+  }
+
+  // Allow API requests with admin API key
+  if (isApiRoute && process.env.ADMIN_API_KEY) {
+    const authHeader = req.headers.get("authorization");
+    if (authHeader?.replace("Bearer ", "") === process.env.ADMIN_API_KEY) {
+      return NextResponse.next();
+    }
   }
 
   // Redirect authenticated users away from auth pages
