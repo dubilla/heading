@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { getGoalById } from "@/lib/db/goals";
 import { getMilestonesByGoalId } from "@/lib/db/milestones";
 import { getTodosByGoalId } from "@/lib/db/todos";
+import { getProgressUpdatesByGoalId } from "@/lib/db/progress-updates";
 import { calculateGoalProgress, getStatusLabel } from "@/lib/utils/progress";
 import { Navbar } from "@/components/Navbar";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -9,6 +10,7 @@ import { GoalActions } from "@/components/GoalActions";
 import { MilestoneList } from "@/components/MilestoneList";
 import { TodoList } from "@/components/TodoList";
 import { ProgressBar } from "@/components/ProgressBar";
+import { ProgressUpdates } from "@/components/ProgressUpdates";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -26,9 +28,10 @@ export default async function GoalDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const [milestones, todos] = await Promise.all([
+  const [milestones, todos, progressUpdates] = await Promise.all([
     getMilestonesByGoalId(id, userId),
     getTodosByGoalId(id, userId),
+    getProgressUpdatesByGoalId(id, userId),
   ]);
 
   const progress = calculateGoalProgress(goal, todos);
@@ -145,6 +148,10 @@ export default async function GoalDetailPage({ params }: PageProps) {
               </span>
             </div>
           </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <ProgressUpdates goal={goal} initialUpdates={progressUpdates ?? []} />
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">

@@ -1,10 +1,46 @@
 import {
   calculateProgress,
+  calculateValueProgress,
   calculateExpectedProgress,
   determineStatus,
   getStatusColor,
   getStatusLabel,
 } from "@/lib/utils/progress";
+
+describe("calculateValueProgress", () => {
+  it("handles qualitative 0-100% goals", () => {
+    expect(calculateValueProgress(0, 0, 100)).toBe(0);
+    expect(calculateValueProgress(50, 0, 100)).toBe(50);
+    expect(calculateValueProgress(100, 0, 100)).toBe(100);
+  });
+
+  it("handles quantitative increasing goals (read 3 novels)", () => {
+    expect(calculateValueProgress(0, 0, 3)).toBe(0);
+    expect(calculateValueProgress(1, 0, 3)).toBe(33);
+    expect(calculateValueProgress(2, 0, 3)).toBe(67);
+    expect(calculateValueProgress(3, 0, 3)).toBe(100);
+  });
+
+  it("handles decreasing goals (lose weight: 200 -> 180)", () => {
+    expect(calculateValueProgress(200, 200, 180)).toBe(0);
+    expect(calculateValueProgress(190, 200, 180)).toBe(50);
+    expect(calculateValueProgress(180, 200, 180)).toBe(100);
+  });
+
+  it("clamps overshoot in display (but not in data)", () => {
+    expect(calculateValueProgress(5, 0, 3)).toBe(100);
+    expect(calculateValueProgress(175, 200, 180)).toBe(100);
+  });
+
+  it("clamps undershoot to 0", () => {
+    expect(calculateValueProgress(-10, 0, 100)).toBe(0);
+    expect(calculateValueProgress(210, 200, 180)).toBe(0);
+  });
+
+  it("returns 0 when start equals target (avoids divide-by-zero)", () => {
+    expect(calculateValueProgress(5, 10, 10)).toBe(0);
+  });
+});
 
 describe("calculateProgress", () => {
   it("returns 0 for no todos", () => {

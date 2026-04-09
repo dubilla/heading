@@ -1,9 +1,11 @@
 import Link from "next/link";
-import type { Goal } from "@/lib/db/schema";
+import type { Goal, ProgressUpdate } from "@/lib/db/schema";
 import { StatusBadge } from "@/components/StatusBadge";
+import { calculateValueProgress } from "@/lib/utils/progress";
+import { formatRelativeTime } from "@/lib/utils/date-helpers";
 
 interface GoalCardProps {
-  goal: Goal;
+  goal: Goal & { latestProgressUpdate?: ProgressUpdate | null };
 }
 
 export function GoalCard({ goal }: GoalCardProps) {
@@ -13,6 +15,11 @@ export function GoalCard({ goal }: GoalCardProps) {
     day: "numeric",
     year: "numeric",
   });
+
+  const latest = goal.latestProgressUpdate ?? null;
+  const latestPercent = latest
+    ? calculateValueProgress(latest.value, goal.startValue, goal.targetValue)
+    : 0;
 
   return (
     <Link href={`/goals/${goal.id}`} className="block group">
@@ -48,6 +55,30 @@ export function GoalCard({ goal }: GoalCardProps) {
               )}
             </div>
             <StatusBadge status={goal.status} />
+          </div>
+
+          {/* Progress + staleness */}
+          <div className="mt-2">
+            <div
+              className="flex items-center justify-between text-xs mb-1.5"
+              style={{ color: "var(--text-tertiary)" }}
+            >
+              <span className="font-semibold">{latestPercent}%</span>
+              <span>
+                {latest
+                  ? `Updated ${formatRelativeTime(new Date(latest.occurredAt))}`
+                  : "No updates yet"}
+              </span>
+            </div>
+            <div
+              className="h-1.5 rounded-full overflow-hidden"
+              style={{ background: "var(--border-secondary)" }}
+            >
+              <div
+                className="h-full rounded-full bg-gradient-gold transition-all"
+                style={{ width: `${latestPercent}%` }}
+              ></div>
+            </div>
           </div>
 
           {/* Divider */}
