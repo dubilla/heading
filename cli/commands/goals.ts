@@ -8,10 +8,16 @@ import {
 } from "@/lib/db/goals";
 import { getMilestonesByGoalId } from "@/lib/db/milestones";
 import { getTodosByGoalId } from "@/lib/db/todos";
+import {
+  createProgressUpdate,
+  deleteProgressUpdate,
+  getProgressUpdatesByGoalId,
+  updateProgressUpdate,
+} from "@/lib/db/progress-updates";
+import { calculateValueProgress } from "@/lib/utils/progress";
 import { getUserId, formatDate, formatStatus, printTable } from "../utils";
 
-export const goalsCommand = new Command("goals")
-  .description("Manage goals");
+export const goalsCommand = new Command("goals").description("Manage goals");
 
 goalsCommand
   .command("list")
@@ -101,6 +107,9 @@ goalsCommand
   .option("-d, --description <description>", "Goal description")
   .option("-c, --category <category>", "Goal category")
   .option("-o, --objective-id <objectiveId>", "Link to objective")
+  .option("--start-value <n>", "Start value for progress tracking", "0")
+  .option("--target-value <n>", "Target value for progress tracking", "100")
+  .option("--unit <unit>", "Unit label for progress (e.g. %, novels, lbs)", "%")
   .action(async function (this: Command) {
     const userId = getUserId(this);
     const opts = this.opts();
@@ -111,6 +120,9 @@ goalsCommand
       targetDate: new Date(opts.targetDate),
       category: opts.category ?? null,
       objectiveId: opts.objectiveId ?? null,
+      startValue: Number(opts.startValue),
+      targetValue: Number(opts.targetValue),
+      unit: opts.unit,
       status: "not_started",
     });
     console.log(`Created goal: ${goal.id}`);
@@ -129,6 +141,9 @@ goalsCommand
     "-s, --status <status>",
     "New status (not_started, in_progress, on_track, off_track, completed)"
   )
+  .option("--start-value <n>", "New start value")
+  .option("--target-value <n>", "New target value")
+  .option("--unit <unit>", "New unit label")
   .action(async function (this: Command, id: string) {
     const userId = getUserId(this);
     const opts = this.opts();
@@ -139,6 +154,11 @@ goalsCommand
     if (opts.category) data.category = opts.category;
     if (opts.objectiveId) data.objectiveId = opts.objectiveId;
     if (opts.status) data.status = opts.status;
+    if (opts.startValue !== undefined)
+      data.startValue = Number(opts.startValue);
+    if (opts.targetValue !== undefined)
+      data.targetValue = Number(opts.targetValue);
+    if (opts.unit !== undefined) data.unit = opts.unit;
 
     if (Object.keys(data).length === 0) {
       console.error("No fields to update.");
@@ -167,4 +187,111 @@ goalsCommand
       process.exit(1);
     }
     console.log("Goal deleted.");
+  });
+
+// --- Progress updates ---
+
+const progressCommand = goalsCommand
+  .command("progress")
+  .description("Manage progress updates on a goal");
+
+progressCommand
+  .command("list <goalId>")
+  .description("List all progress updates for a goal")
+  .action(async function (this: Command, goalId: string) {
+    const userId = getUserId(this.parent!.parent!);
+    const updates = await getProgressUpdatesByGoalId(goalId, userId);
+    if (updates === null) {
+      console.error("Goal not found.");
+      process.exit(1);
+    }
+    if (updates.length === 0) {
+      console.log("No progress updates yet.");
+      return;
+    }
+    const goal = await getGoalById(goalId, userId);
+    printTable(
+      ["ID", "Value", "%", "Occurred", "Note"],
+      updates.map((u) => [
+        u.id.slice(0, 8),
+        `${u.value}${goal?.unit ? ` ${goal.unit}` : ""}`,
+        `${
+          goal
+            ? calculateValueProgress(u.value, goal.startValue, goal.targetValue)
+            : 0
+        }%`,
+        formatDate(new Date(u.occurredAt)),
+        u.note ? u.note.slice(0, 40) : "—",
+      ])
+    );
+  });
+
+progressCommand
+  .command("create <goalId>")
+  .description("Log a new progress update on a goal")
+  .requiredOption("-v, --value <n>", "Numeric value for the update")
+  .option("-n, --note <note>", "Optional note")
+  .option(
+    "--occurred-at <date>",
+    "When the progress happened (YYYY-MM-DD, defaults to today)"
+  )
+  .action(async function (this: Command, goalId: string) {
+    const userId = getUserId(this.parent!.parent!);
+    const opts = this.opts();
+    const update = await createProgressUpdate(
+      {
+        goalId,
+        userId,
+        value: Number(opts.value),
+        note: opts.note ?? null,
+        occurredAt: opts.occurredAt ? new Date(opts.occurredAt) : new Date(),
+      },
+      userId
+    );
+    if (!update) {
+      console.error("Goal not found.");
+      process.exit(1);
+    }
+    console.log(`Logged progress update: ${update.id}`);
+    console.log(`Value: ${update.value}`);
+    console.log(`Occurred: ${formatDate(new Date(update.occurredAt))}`);
+  });
+
+progressCommand
+  .command("update <id>")
+  .description("Edit an existing progress update")
+  .option("-v, --value <n>", "New value")
+  .option("-n, --note <note>", "New note")
+  .option("--occurred-at <date>", "New occurred-at date (YYYY-MM-DD)")
+  .action(async function (this: Command, id: string) {
+    const userId = getUserId(this.parent!.parent!);
+    const opts = this.opts();
+    const data: {
+      value?: number;
+      note?: string | null;
+      occurredAt?: Date;
+    } = {};
+    if (opts.value !== undefined) data.value = Number(opts.value);
+    if (opts.note !== undefined) data.note = opts.note;
+    if (opts.occurredAt) data.occurredAt = new Date(opts.occurredAt);
+
+    const update = await updateProgressUpdate(id, userId, data);
+    if (!update) {
+      console.error("Progress update not found.");
+      process.exit(1);
+    }
+    console.log(`Updated progress update: ${update.id}`);
+  });
+
+progressCommand
+  .command("delete <id>")
+  .description("Delete a progress update")
+  .action(async function (this: Command, id: string) {
+    const userId = getUserId(this.parent!.parent!);
+    const deleted = await deleteProgressUpdate(id, userId);
+    if (!deleted) {
+      console.error("Progress update not found.");
+      process.exit(1);
+    }
+    console.log("Progress update deleted.");
   });

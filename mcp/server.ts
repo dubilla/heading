@@ -36,6 +36,13 @@ import {
   deleteTodo,
   getTodoStats,
 } from "@/lib/db/todos";
+import {
+  createProgressUpdate,
+  deleteProgressUpdate,
+  getLatestProgressUpdateForGoal,
+  getProgressUpdatesByGoalId,
+  updateProgressUpdate,
+} from "@/lib/db/progress-updates";
 
 const USER_ID = process.env.HEADING_USER_ID;
 if (!USER_ID) {
@@ -120,9 +127,7 @@ server.tool(
       status: "not_started",
     });
     return {
-      content: [
-        { type: "text" as const, text: JSON.stringify(obj, null, 2) },
-      ],
+      content: [{ type: "text" as const, text: JSON.stringify(obj, null, 2) }],
     };
   }
 );
@@ -135,7 +140,13 @@ server.tool(
     title: z.string().min(1).max(200).optional().describe("New title"),
     description: z.string().max(1000).optional().describe("New description"),
     status: z
-      .enum(["not_started", "in_progress", "on_track", "off_track", "completed"])
+      .enum([
+        "not_started",
+        "in_progress",
+        "on_track",
+        "off_track",
+        "completed",
+      ])
       .optional()
       .describe("New status"),
   },
@@ -153,9 +164,7 @@ server.tool(
       };
     }
     return {
-      content: [
-        { type: "text" as const, text: JSON.stringify(obj, null, 2) },
-      ],
+      content: [{ type: "text" as const, text: JSON.stringify(obj, null, 2) }],
     };
   }
 );
@@ -184,10 +193,7 @@ server.tool(
   "list_goals",
   "List all goals. Optionally filter by objective ID.",
   {
-    objectiveId: z
-      .string()
-      .optional()
-      .describe("Filter by objective UUID"),
+    objectiveId: z.string().optional().describe("Filter by objective UUID"),
   },
   async ({ objectiveId }) => {
     let userGoals = await getGoalsByUserId(USER_ID);
@@ -204,7 +210,7 @@ server.tool(
 
 server.tool(
   "get_goal",
-  "Get a single goal by ID with its milestones and todos.",
+  "Get a single goal by ID with its milestones, todos, and latest progress update.",
   { id: z.string().describe("Goal UUID") },
   async ({ id }) => {
     const goal = await getGoalById(id, USER_ID);
@@ -214,16 +220,24 @@ server.tool(
         isError: true,
       };
     }
-    const [goalMilestones, goalTodos] = await Promise.all([
-      getMilestonesByGoalId(id, USER_ID),
-      getTodosByGoalId(id, USER_ID),
-    ]);
+    const [goalMilestones, goalTodos, latestProgressUpdate] = await Promise.all(
+      [
+        getMilestonesByGoalId(id, USER_ID),
+        getTodosByGoalId(id, USER_ID),
+        getLatestProgressUpdateForGoal(id),
+      ]
+    );
     return {
       content: [
         {
           type: "text" as const,
           text: JSON.stringify(
-            { goal, milestones: goalMilestones, todos: goalTodos },
+            {
+              goal,
+              milestones: goalMilestones,
+              todos: goalTodos,
+              latestProgressUpdate,
+            },
             null,
             2
           ),
@@ -235,20 +249,37 @@ server.tool(
 
 server.tool(
   "create_goal",
-  "Create a new goal.",
+  "Create a new goal. Progress tracking defaults to 0 → 100 %, but can be overridden with a numeric start/target and custom unit (e.g. 0 → 3 novels).",
   {
     title: z.string().min(1).max(200).describe("Goal title"),
     description: z.string().max(1000).optional().describe("Goal description"),
-    targetDate: z
-      .string()
-      .describe("Target date in YYYY-MM-DD format"),
+    targetDate: z.string().describe("Target date in YYYY-MM-DD format"),
     category: z.string().max(50).optional().describe("Goal category"),
-    objectiveId: z
-      .string()
+    objectiveId: z.string().optional().describe("Link to an objective UUID"),
+    startValue: z
+      .number()
       .optional()
-      .describe("Link to an objective UUID"),
+      .describe("Starting numeric value for progress tracking (default 0)"),
+    targetValue: z
+      .number()
+      .optional()
+      .describe("Target numeric value for progress tracking (default 100)"),
+    unit: z
+      .string()
+      .max(20)
+      .optional()
+      .describe("Unit label (default '%'). Free text like 'novels', 'lbs'."),
   },
-  async ({ title, description, targetDate, category, objectiveId }) => {
+  async ({
+    title,
+    description,
+    targetDate,
+    category,
+    objectiveId,
+    startValue,
+    targetValue,
+    unit,
+  }) => {
     const goal = await createGoal({
       userId: USER_ID,
       title,
@@ -256,38 +287,53 @@ server.tool(
       targetDate: new Date(targetDate),
       category: category ?? null,
       objectiveId: objectiveId ?? null,
+      startValue: startValue ?? 0,
+      targetValue: targetValue ?? 100,
+      unit: unit ?? "%",
       status: "not_started",
     });
     return {
-      content: [
-        { type: "text" as const, text: JSON.stringify(goal, null, 2) },
-      ],
+      content: [{ type: "text" as const, text: JSON.stringify(goal, null, 2) }],
     };
   }
 );
 
 server.tool(
   "update_goal",
-  "Update a goal's title, description, status, target date, category, or objective link.",
+  "Update a goal's title, description, status, target date, category, objective link, or progress tracking range (start/target/unit).",
   {
     id: z.string().describe("Goal UUID"),
     title: z.string().min(1).max(200).optional().describe("New title"),
     description: z.string().max(1000).optional().describe("New description"),
-    targetDate: z
-      .string()
-      .optional()
-      .describe("New target date (YYYY-MM-DD)"),
+    targetDate: z.string().optional().describe("New target date (YYYY-MM-DD)"),
     category: z.string().max(50).optional().describe("New category"),
-    objectiveId: z
-      .string()
-      .optional()
-      .describe("New objective UUID link"),
+    objectiveId: z.string().optional().describe("New objective UUID link"),
     status: z
-      .enum(["not_started", "in_progress", "on_track", "off_track", "completed"])
+      .enum([
+        "not_started",
+        "in_progress",
+        "on_track",
+        "off_track",
+        "completed",
+      ])
       .optional()
       .describe("New status"),
+    startValue: z.number().optional().describe("New start value"),
+    targetValue: z.number().optional().describe("New target value"),
+    unit: z.string().max(20).optional().describe("New unit label"),
   },
-  async ({ id, title, description, targetDate, category, objectiveId, status }) => {
+  async ({
+    id,
+    title,
+    description,
+    targetDate,
+    category,
+    objectiveId,
+    status,
+    startValue,
+    targetValue,
+    unit,
+  }) => {
     const data: Record<string, unknown> = {};
     if (title) data.title = title;
     if (description !== undefined) data.description = description;
@@ -295,6 +341,9 @@ server.tool(
     if (category) data.category = category;
     if (objectiveId) data.objectiveId = objectiveId;
     if (status) data.status = status;
+    if (startValue !== undefined) data.startValue = startValue;
+    if (targetValue !== undefined) data.targetValue = targetValue;
+    if (unit !== undefined) data.unit = unit;
 
     const goal = await updateGoal(id, USER_ID, data);
     if (!goal) {
@@ -304,9 +353,7 @@ server.tool(
       };
     }
     return {
-      content: [
-        { type: "text" as const, text: JSON.stringify(goal, null, 2) },
-      ],
+      content: [{ type: "text" as const, text: JSON.stringify(goal, null, 2) }],
     };
   }
 );
@@ -506,9 +553,7 @@ server.tool(
       };
     }
     return {
-      content: [
-        { type: "text" as const, text: JSON.stringify(todo, null, 2) },
-      ],
+      content: [{ type: "text" as const, text: JSON.stringify(todo, null, 2) }],
     };
   }
 );
@@ -538,9 +583,7 @@ server.tool(
       };
     }
     return {
-      content: [
-        { type: "text" as const, text: JSON.stringify(todo, null, 2) },
-      ],
+      content: [{ type: "text" as const, text: JSON.stringify(todo, null, 2) }],
     };
   }
 );
@@ -556,6 +599,121 @@ server.tool(
         {
           type: "text" as const,
           text: deleted ? "Todo deleted." : "Todo not found.",
+        },
+      ],
+      isError: !deleted,
+    };
+  }
+);
+
+// --- Progress updates ---
+
+server.tool(
+  "list_progress_updates",
+  "List all progress updates for a goal, newest first.",
+  { goalId: z.string().describe("Goal UUID") },
+  async ({ goalId }) => {
+    const updates = await getProgressUpdatesByGoalId(goalId, USER_ID);
+    if (updates === null) {
+      return {
+        content: [{ type: "text" as const, text: "Goal not found." }],
+        isError: true,
+      };
+    }
+    return {
+      content: [
+        { type: "text" as const, text: JSON.stringify(updates, null, 2) },
+      ],
+    };
+  }
+);
+
+server.tool(
+  "create_progress_update",
+  "Log a new progress update on a goal. Value is cumulative (e.g. '2' on a 'read 3 novels' goal means 2 so far). occurredAt defaults to today and supports backdating.",
+  {
+    goalId: z.string().describe("Goal UUID"),
+    value: z.number().describe("Numeric value for the update"),
+    note: z.string().max(2000).optional().describe("Optional note"),
+    occurredAt: z
+      .string()
+      .optional()
+      .describe("When the progress happened (YYYY-MM-DD). Defaults to today."),
+  },
+  async ({ goalId, value, note, occurredAt }) => {
+    const update = await createProgressUpdate(
+      {
+        goalId,
+        userId: USER_ID,
+        value,
+        note: note ?? null,
+        occurredAt: occurredAt ? new Date(occurredAt) : new Date(),
+      },
+      USER_ID
+    );
+    if (!update) {
+      return {
+        content: [{ type: "text" as const, text: "Goal not found." }],
+        isError: true,
+      };
+    }
+    return {
+      content: [
+        { type: "text" as const, text: JSON.stringify(update, null, 2) },
+      ],
+    };
+  }
+);
+
+server.tool(
+  "update_progress_update",
+  "Edit an existing progress update's value, note, or occurredAt.",
+  {
+    id: z.string().describe("Progress update UUID"),
+    value: z.number().optional().describe("New value"),
+    note: z.string().max(2000).optional().describe("New note"),
+    occurredAt: z.string().optional().describe("New occurred-at (YYYY-MM-DD)"),
+  },
+  async ({ id, value, note, occurredAt }) => {
+    const data: {
+      value?: number;
+      note?: string | null;
+      occurredAt?: Date;
+    } = {};
+    if (value !== undefined) data.value = value;
+    if (note !== undefined) data.note = note;
+    if (occurredAt !== undefined) data.occurredAt = new Date(occurredAt);
+
+    const update = await updateProgressUpdate(id, USER_ID, data);
+    if (!update) {
+      return {
+        content: [
+          { type: "text" as const, text: "Progress update not found." },
+        ],
+        isError: true,
+      };
+    }
+    return {
+      content: [
+        { type: "text" as const, text: JSON.stringify(update, null, 2) },
+      ],
+    };
+  }
+);
+
+server.tool(
+  "delete_progress_update",
+  "Delete a progress update by ID.",
+  { id: z.string().describe("Progress update UUID") },
+  async ({ id }) => {
+    const deleted = await deleteProgressUpdate(id, USER_ID);
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: deleted
+            ? "Progress update deleted."
+            : "Progress update not found.",
         },
       ],
       isError: !deleted,
