@@ -17,6 +17,27 @@ export function calculateProgress(total: number, completed: number): number {
   return Math.round((completed / total) * 100);
 }
 
+/**
+ * Compute a 0-100 percentage from a user-reported value on a goal with a
+ * start/target range. Handles both increasing (start < target) and
+ * decreasing (start > target, e.g. weight loss) goals. Overshoot is clamped
+ * in display, but input values are not validated here — callers are free to
+ * record any value and we just report how it maps onto the range.
+ */
+export function calculateValueProgress(
+  value: number,
+  startValue: number,
+  targetValue: number
+): number {
+  if (startValue === targetValue) return 0;
+  const range = targetValue - startValue;
+  const progressed = value - startValue;
+  const raw = (progressed / range) * 100;
+  if (raw <= 0) return 0;
+  if (raw >= 100) return 100;
+  return Math.round(raw);
+}
+
 export function calculateExpectedProgress(
   startDate: Date,
   targetDate: Date,

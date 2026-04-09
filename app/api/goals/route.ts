@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserId } from "@/lib/api-auth";
-import { getGoalsByUserId, createGoal } from "@/lib/db/goals";
+import { getGoalsByUserIdWithLatestUpdate, createGoal } from "@/lib/db/goals";
 import { createGoalSchema } from "@/lib/validations/goal";
 
 export async function GET() {
@@ -10,7 +10,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const goals = await getGoalsByUserId(userId);
+    const goals = await getGoalsByUserIdWithLatestUpdate(userId);
     return NextResponse.json({ data: goals });
   } catch (error) {
     console.error("Error fetching goals:", error);
@@ -45,6 +45,9 @@ export async function POST(request: NextRequest) {
       targetDate: parsed.data.targetDate,
       category: parsed.data.category ?? null,
       objectiveId: parsed.data.objectiveId ?? null,
+      startValue: parsed.data.startValue,
+      targetValue: parsed.data.targetValue,
+      unit: parsed.data.unit,
       status: "not_started",
     });
 

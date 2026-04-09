@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUserId } from "@/lib/api-auth";
-import { getGoalById, updateGoal, deleteGoal } from "@/lib/db/goals";
+import {
+  getGoalById,
+  getGoalByIdWithLatestUpdate,
+  updateGoal,
+  deleteGoal,
+} from "@/lib/db/goals";
 import { updateGoalSchema } from "@/lib/validations/goal";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -13,7 +18,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     const { id } = await params;
-    const goal = await getGoalById(id, userId);
+    const goal = await getGoalByIdWithLatestUpdate(id, userId);
 
     if (!goal) {
       return NextResponse.json({ error: "Goal not found" }, { status: 404 });

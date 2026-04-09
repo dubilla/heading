@@ -1,12 +1,32 @@
 import { db } from "@/lib/db";
-import { goals, Goal, NewGoal } from "@/lib/db/schema";
+import { goals, Goal, NewGoal, ProgressUpdate } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
+import {
+  getLatestProgressUpdatesForGoals,
+  getLatestProgressUpdateForGoal,
+} from "@/lib/db/progress-updates";
+
+export type GoalWithLatestUpdate = Goal & {
+  latestProgressUpdate: ProgressUpdate | null;
+};
 
 export async function getGoalsByUserId(userId: string): Promise<Goal[]> {
   return db.query.goals.findMany({
     where: eq(goals.userId, userId),
     orderBy: [desc(goals.createdAt)],
   });
+}
+
+export async function getGoalsByUserIdWithLatestUpdate(
+  userId: string
+): Promise<GoalWithLatestUpdate[]> {
+  const rows = await getGoalsByUserId(userId);
+  if (rows.length === 0) return [];
+  const latest = await getLatestProgressUpdatesForGoals(rows.map((g) => g.id));
+  return rows.map((g) => ({
+    ...g,
+    latestProgressUpdate: latest.get(g.id) ?? null,
+  }));
 }
 
 export async function getGoalById(
@@ -16,6 +36,16 @@ export async function getGoalById(
   return db.query.goals.findFirst({
     where: and(eq(goals.id, id), eq(goals.userId, userId)),
   });
+}
+
+export async function getGoalByIdWithLatestUpdate(
+  id: string,
+  userId: string
+): Promise<GoalWithLatestUpdate | null> {
+  const goal = await getGoalById(id, userId);
+  if (!goal) return null;
+  const latestProgressUpdate = await getLatestProgressUpdateForGoal(id);
+  return { ...goal, latestProgressUpdate };
 }
 
 export async function createGoal(

@@ -84,3 +84,30 @@ export function getDaysUntil(targetDate: Date): number {
 export function isOverdue(targetDate: Date): boolean {
   return getDaysUntil(targetDate) < 0;
 }
+
+/**
+ * Human-friendly "x ago" / "in x" for timestamps relative to `now`.
+ * Returns strings like "just now", "5m ago", "3h ago", "2d ago", "3w ago",
+ * or "Mar 1, 2025" for anything older than ~3 months.
+ */
+export function formatRelativeTime(date: Date, now: Date = new Date()): string {
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.round(diffMs / 1000);
+  const abs = Math.abs(diffSec);
+  const future = diffSec < 0;
+
+  if (abs < 45) return future ? "in a moment" : "just now";
+  const diffMin = Math.round(diffSec / 60);
+  if (Math.abs(diffMin) < 60)
+    return future ? `in ${-diffMin}m` : `${diffMin}m ago`;
+  const diffHour = Math.round(diffMin / 60);
+  if (Math.abs(diffHour) < 24)
+    return future ? `in ${-diffHour}h` : `${diffHour}h ago`;
+  const diffDay = Math.round(diffHour / 24);
+  if (Math.abs(diffDay) < 7)
+    return future ? `in ${-diffDay}d` : `${diffDay}d ago`;
+  const diffWeek = Math.round(diffDay / 7);
+  if (Math.abs(diffWeek) < 13)
+    return future ? `in ${-diffWeek}w` : `${diffWeek}w ago`;
+  return formatDate(date);
+}

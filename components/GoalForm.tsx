@@ -64,6 +64,9 @@ export function GoalForm({
       targetDate: formData.get("targetDate") as string,
       category: (formData.get("category") as string) || null,
       objectiveId: objectiveIdValue || null,
+      startValue: Number(formData.get("startValue")),
+      targetValue: Number(formData.get("targetValue")),
+      unit: ((formData.get("unit") as string) || "%").trim(),
     };
 
     try {
@@ -201,6 +204,69 @@ export function GoalForm({
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             placeholder="e.g., Health, Career, Personal"
           />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700">
+          Progress tracking
+        </label>
+        <p className="mt-1 text-xs text-gray-500">
+          Defaults to 0% → 100%. Override if your goal has a specific numeric
+          target (e.g. read 3 novels, lose 20 lbs).
+        </p>
+        <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div>
+            <label
+              htmlFor="startValue"
+              className="block text-xs font-medium text-gray-600"
+            >
+              Start
+            </label>
+            <input
+              type="number"
+              step="any"
+              id="startValue"
+              name="startValue"
+              required
+              defaultValue={goal?.startValue ?? 0}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="targetValue"
+              className="block text-xs font-medium text-gray-600"
+            >
+              Target
+            </label>
+            <input
+              type="number"
+              step="any"
+              id="targetValue"
+              name="targetValue"
+              required
+              defaultValue={goal?.targetValue ?? 100}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="unit"
+              className="block text-xs font-medium text-gray-600"
+            >
+              Unit
+            </label>
+            <input
+              type="text"
+              id="unit"
+              name="unit"
+              maxLength={20}
+              defaultValue={goal?.unit ?? "%"}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="%"
+            />
+          </div>
         </div>
       </div>
 

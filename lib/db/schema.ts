@@ -5,10 +5,12 @@ import {
   timestamp,
   boolean,
   integer,
+  doublePrecision,
   date,
   pgEnum,
   json,
   primaryKey,
+  index,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 
@@ -129,9 +131,36 @@ export const goals = pgTable("goals", {
   targetDate: date("target_date", { mode: "date" }).notNull(),
   category: text("category"),
   status: goalStatusEnum("status").default("not_started").notNull(),
+  startValue: doublePrecision("start_value").default(0).notNull(),
+  targetValue: doublePrecision("target_value").default(100).notNull(),
+  unit: text("unit").default("%").notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
+
+export const progressUpdates = pgTable(
+  "progress_updates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    goalId: uuid("goal_id")
+      .notNull()
+      .references(() => goals.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    value: doublePrecision("value").notNull(),
+    note: text("note"),
+    occurredAt: timestamp("occurred_at", { mode: "date" }).notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("progress_updates_goal_occurred_idx").on(
+      table.goalId,
+      table.occurredAt.desc()
+    ),
+  ]
+);
 
 export const milestones = pgTable("milestones", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -209,5 +238,7 @@ export type Todo = typeof todos.$inferSelect;
 export type NewTodo = typeof todos.$inferInsert;
 export type PlanningSession = typeof planningSessions.$inferSelect;
 export type NewPlanningSession = typeof planningSessions.$inferInsert;
+export type ProgressUpdate = typeof progressUpdates.$inferSelect;
+export type NewProgressUpdate = typeof progressUpdates.$inferInsert;
 export type CheckIn = typeof checkIns.$inferSelect;
 export type NewCheckIn = typeof checkIns.$inferInsert;
