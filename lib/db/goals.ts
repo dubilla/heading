@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
-import { goals, Goal, NewGoal } from "@/lib/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { goals, milestones, Goal, NewGoal } from "@/lib/db/schema";
+import { eq, and, desc, count } from "drizzle-orm";
 
 export async function getGoalsByUserId(userId: string): Promise<Goal[]> {
   return db.query.goals.findMany({
@@ -56,4 +56,39 @@ export async function getGoalStats(userId: string) {
   const offTrack = userGoals.filter((g) => g.status === "off_track").length;
 
   return { total, completed, inProgress, offTrack };
+}
+
+export async function getGoalMilestoneStatus(goalId: string, userId: string) {
+  const goal = await getGoalById(goalId, userId);
+
+  if (!goal) {
+    return { hasMilestones: false, milestoneCount: 0 };
+  }
+
+  const milestoneCount = await db
+    .select({ count: count() })
+    .from(milestones)
+    .where(eq(milestones.goalId, goalId))
+    .then((result) => result[0]?.count || 0);
+
+  return {
+    hasMilestones: milestoneCount > 0,
+    milestoneCount,
+  };
+}
+
+export async function getGoalsWithMilestoneStatus(userId: string) {
+  const userGoals = await getGoalsByUserId(userId);
+
+  const goalsWithStatus = await Promise.all(
+    userGoals.map(async (goal) => {
+      const milestoneStatus = await getGoalMilestoneStatus(goal.id, userId);
+      return {
+        ...goal,
+        ...milestoneStatus,
+      };
+    })
+  );
+
+  return goalsWithStatus;
 }
