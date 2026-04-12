@@ -1,12 +1,12 @@
 import { auth } from "@/lib/auth";
-import { getGoalsByUserId } from "@/lib/db/goals";
+import { getGoalsWithMilestoneStatus } from "@/lib/db/goals";
 import { Navbar } from "@/components/Navbar";
 import { GoalCard } from "@/components/GoalCard";
 import Link from "next/link";
 
 export default async function GoalsPage() {
   const session = await auth();
-  const goals = await getGoalsByUserId(session!.user!.id!);
+  const goals = await getGoalsWithMilestoneStatus(session!.user!.id!);
 
   return (
     <div className="min-h-screen bg-gray-50">
