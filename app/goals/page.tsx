@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { getGoalsByUserIdWithLatestUpdate } from "@/lib/db/goals";
+import { getMilestoneCountsForGoals } from "@/lib/db/milestones";
 import { Navbar } from "@/components/Navbar";
 import { GoalCard } from "@/components/GoalCard";
 import Link from "next/link";
@@ -9,6 +10,12 @@ export const dynamic = "force-dynamic";
 export default async function GoalsPage() {
   const session = await auth();
   const goals = await getGoalsByUserIdWithLatestUpdate(session!.user!.id!);
+  const milestoneCounts = await getMilestoneCountsForGoals(
+    goals.map((g) => g.id)
+  );
+  const goalsWithoutMilestones = goals.filter(
+    (g) => !milestoneCounts.get(g.id) && g.status !== "completed"
+  );
 
   return (
     <div
@@ -173,17 +180,101 @@ export default async function GoalsPage() {
             </div>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {goals.map((goal, index) => (
+          <>
+            {goalsWithoutMilestones.length > 0 && (
               <div
-                key={goal.id}
-                className="animate-fade-in-up"
-                style={{ animationDelay: `${index * 0.1}s` }}
+                className="mb-8 p-5 rounded-2xl glass animate-fade-in-up"
+                style={{
+                  border: "1px solid rgba(251, 146, 60, 0.3)",
+                  background:
+                    "linear-gradient(135deg, rgba(251, 146, 60, 0.05), rgba(251, 191, 36, 0.05))",
+                }}
               >
-                <GoalCard goal={goal} />
+                <div className="flex items-start gap-3 mb-3">
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style={{ background: "rgba(251, 146, 60, 0.15)" }}
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      style={{ color: "var(--gold-400)" }}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3
+                      className="text-sm font-bold mb-1"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {goalsWithoutMilestones.length === 1
+                        ? "1 goal needs milestones"
+                        : `${goalsWithoutMilestones.length} goals need milestones`}
+                    </h3>
+                    <p
+                      className="text-xs"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      Break goals into quarterly milestones to stay on track and
+                      measure progress.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 ml-11">
+                  {goalsWithoutMilestones.map((goal) => (
+                    <Link
+                      key={goal.id}
+                      href={`/goals/${goal.id}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:scale-105"
+                      style={{
+                        background: "rgba(251, 191, 36, 0.1)",
+                        color: "var(--gold-400)",
+                        border: "1px solid rgba(251, 191, 36, 0.2)",
+                      }}
+                    >
+                      {goal.title}
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 7l5 5m0 0l-5 5m5-5H6"
+                        />
+                      </svg>
+                    </Link>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
+            )}
+
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {goals.map((goal, index) => (
+                <div
+                  key={goal.id}
+                  className="animate-fade-in-up"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  <GoalCard
+                    goal={goal}
+                    milestoneCount={milestoneCounts.get(goal.id) ?? 0}
+                  />
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </main>
     </div>
