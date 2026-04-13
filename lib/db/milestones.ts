@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { milestones, goals, Milestone, NewMilestone } from "@/lib/db/schema";
-import { eq, and, asc } from "drizzle-orm";
+import { eq, and, asc, inArray, count } from "drizzle-orm";
 
 export async function getMilestonesByGoalId(
   goalId: string,
@@ -122,6 +122,18 @@ export async function getMonthlyMilestones(
   }
 
   return monthly;
+}
+
+export async function getMilestoneCountsForGoals(
+  goalIds: string[]
+): Promise<Map<string, number>> {
+  if (goalIds.length === 0) return new Map();
+  const rows = await db
+    .select({ goalId: milestones.goalId, count: count() })
+    .from(milestones)
+    .where(inArray(milestones.goalId, goalIds))
+    .groupBy(milestones.goalId);
+  return new Map(rows.map((r) => [r.goalId, r.count]));
 }
 
 function getMonthsForQuarter(quarter: number): number[] {
