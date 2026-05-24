@@ -141,7 +141,7 @@ export function GoalCard({ goal, milestoneCount }: GoalCardProps) {
           </div>
 
           {/* Milestone indicator */}
-          {milestoneCount !== undefined && milestoneCount === 0 && (
+          {milestoneCount === 0 && goal.status !== "completed" && (
             <div
               className="mt-4 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium"
               style={{
