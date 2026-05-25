@@ -1,9 +1,8 @@
-import { getStatusColor } from "@/lib/utils/progress";
-import type { ProgressResult } from "@/lib/utils/progress";
+import { getStatusColor, type ProgressStatus } from "@/lib/utils/progress";
 
 interface ProgressBarProps {
   progress: number;
-  status?: ProgressResult["status"];
+  status?: ProgressStatus;
   showLabel?: boolean;
   size?: "sm" | "md" | "lg";
   showExpected?: boolean;
