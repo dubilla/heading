@@ -108,6 +108,24 @@ export function TodoItem({ todo }: TodoItemProps) {
               {formatDate(new Date(todo.dueDate))}
             </span>
           )}
+          {todo.crewTaskId && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
+              <svg
+                className="w-3 h-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4z"
+                />
+              </svg>
+              In Crew
+            </span>
+          )}
         </div>
       </div>
 
