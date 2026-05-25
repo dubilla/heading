@@ -98,7 +98,7 @@ export default async function GoalDetailPage({ params }: PageProps) {
                 </span>
               )}
             </div>
-            <GoalActions goalId={goal.id} />
+            <GoalActions goalId={goal.id} currentStatus={goal.status} />
           </div>
 
           {goal.description && (
