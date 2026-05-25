@@ -3,7 +3,10 @@ import { getGoalById } from "@/lib/db/goals";
 import { getMilestonesByGoalId } from "@/lib/db/milestones";
 import { getTodosByGoalId } from "@/lib/db/todos";
 import { getProgressUpdatesByGoalId } from "@/lib/db/progress-updates";
-import { calculateGoalProgress, getStatusLabel } from "@/lib/utils/progress";
+import {
+  calculateValueProgress,
+  calculateExpectedProgress,
+} from "@/lib/utils/progress";
 import { Navbar } from "@/components/Navbar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { GoalActions } from "@/components/GoalActions";
@@ -34,7 +37,21 @@ export default async function GoalDetailPage({ params }: PageProps) {
     getProgressUpdatesByGoalId(id, userId),
   ]);
 
-  const progress = calculateGoalProgress(goal, todos);
+  // Headline progress is value-based (latest reported value mapped onto the
+  // goal's start/target range), matching the goals list. Expected progress is
+  // the time-based pace benchmark shown as a marker on the bar.
+  const latestUpdate = progressUpdates?.[0] ?? null;
+  const valuePercent = latestUpdate
+    ? calculateValueProgress(
+        latestUpdate.value,
+        goal.startValue,
+        goal.targetValue
+      )
+    : 0;
+  const expectedProgress = calculateExpectedProgress(
+    new Date(goal.createdAt),
+    new Date(goal.targetDate)
+  );
 
   const targetDate = new Date(goal.targetDate);
   const formattedDate = targetDate.toLocaleDateString("en-US", {
@@ -112,14 +129,16 @@ export default async function GoalDetailPage({ params }: PageProps) {
                 Progress
               </span>
               <span className="text-sm text-gray-500">
-                {getStatusLabel(progress.status)}
+                {latestUpdate
+                  ? `${latestUpdate.value} / ${goal.targetValue} ${goal.unit}`
+                  : "No updates yet"}
               </span>
             </div>
             <ProgressBar
-              progress={progress.actual}
-              status={progress.status}
-              showExpected={todos.length > 0}
-              expectedProgress={progress.expected}
+              progress={valuePercent}
+              status={goal.status}
+              showExpected={goal.status !== "completed"}
+              expectedProgress={expectedProgress}
               size="md"
             />
           </div>
