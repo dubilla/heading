@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Goal, Objective } from "@/lib/db/schema";
+import { GOAL_STATUS_OPTIONS } from "@/lib/goal-status";
 
 interface GoalFormProps {
   goal?: Goal;
@@ -67,6 +68,9 @@ export function GoalForm({
       startValue: Number(formData.get("startValue")),
       targetValue: Number(formData.get("targetValue")),
       unit: ((formData.get("unit") as string) || "%").trim(),
+      // Status is only editable when updating; on create it always starts
+      // at not_started (and createGoalSchema rejects the field).
+      ...(isEditing ? { status: formData.get("status") as string } : {}),
     };
 
     try {
@@ -143,6 +147,33 @@ export function GoalForm({
           placeholder="Describe your goal in more detail..."
         />
       </div>
+
+      {isEditing && (
+        <div>
+          <label
+            htmlFor="status"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Status
+          </label>
+          <select
+            id="status"
+            name="status"
+            defaultValue={goal.status}
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            {GOAL_STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-sm text-gray-500">
+            Goals start automatically once you log progress; set On Track, Off
+            Track, or Completed yourself.
+          </p>
+        </div>
+      )}
 
       <div>
         <label
