@@ -14,6 +14,7 @@ import { MilestoneList } from "@/components/MilestoneList";
 import { TodoList } from "@/components/TodoList";
 import { ProgressBar } from "@/components/ProgressBar";
 import { ProgressUpdates } from "@/components/ProgressUpdates";
+import { isCrewEnabled } from "@/lib/integrations/crew";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -179,7 +180,11 @@ export default async function GoalDetailPage({ params }: PageProps) {
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <TodoList todos={todos} goalId={goal.id} />
+            <TodoList
+              todos={todos}
+              goalId={goal.id}
+              crewEnabled={isCrewEnabled()}
+            />
           </div>
         </div>
 

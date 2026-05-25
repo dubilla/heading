@@ -85,6 +85,82 @@ export async function createCrewTask(todo: Todo): Promise<string | null> {
   }
 }
 
+/** A Crew task as returned by the search endpoint (the fields we render/link). */
+export type CrewTaskSummary = {
+  id: string;
+  title: string;
+  status: string;
+  dueDate: string | null;
+  externalId: string | null;
+  externalSource: string | null;
+};
+
+/**
+ * Search existing Crew tasks by title (for linking an existing task to a goal).
+ * Returns [] when the integration is off, the query is blank, or the call
+ * fails — callers render an empty result rather than erroring.
+ */
+export async function searchCrewTasks(
+  query: string
+): Promise<CrewTaskSummary[]> {
+  const config = crewConfig();
+  if (!config || query.trim().length === 0) return [];
+
+  try {
+    const url = `${config.apiUrl}/api/v1/tasks?search=${encodeURIComponent(query.trim())}`;
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${config.token}` },
+    });
+    if (!response.ok) {
+      console.error(`Crew task search failed with status ${response.status}`);
+      return [];
+    }
+    const data = (await response.json()) as { tasks?: CrewTaskSummary[] };
+    return data.tasks ?? [];
+  } catch (err) {
+    console.error("Crew task search failed:", err);
+    return [];
+  }
+}
+
+/**
+ * Adopt an existing Crew task into Heading by stamping it with our external
+ * link, so Crew's completion write-back fires for it. Returns an outcome the
+ * caller acts on: `ok` to proceed, `conflict` if the task is already linked
+ * elsewhere (surface to the user), `error` for transient/unconfigured failures.
+ */
+export async function linkCrewTask(
+  crewTaskId: string,
+  headingTodoId: string
+): Promise<"ok" | "conflict" | "error"> {
+  const config = crewConfig();
+  if (!config) return "error";
+
+  try {
+    const response = await fetch(
+      `${config.apiUrl}/api/v1/tasks/${crewTaskId}/link`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${config.token}`,
+        },
+        body: JSON.stringify({
+          externalSource: EXTERNAL_SOURCE,
+          externalId: headingTodoId,
+        }),
+      }
+    );
+    if (response.ok) return "ok";
+    if (response.status === 409) return "conflict";
+    console.error(`Crew task link failed with status ${response.status}`);
+    return "error";
+  } catch (err) {
+    console.error("Crew task link failed:", err);
+    return "error";
+  }
+}
+
 /**
  * Mirror a Heading-side completion to Crew. Best-effort and idempotent: Crew
  * returns 409 if the task is already complete, which we treat as benign.

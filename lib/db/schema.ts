@@ -41,6 +41,10 @@ export const planningSessionStatusEnum = pgEnum("planning_session_status", [
   "abandoned",
 ]);
 
+// Where a todo originated: "heading" todos are created here and pushed to Crew;
+// "crew" todos are existing Crew tasks linked into a goal (S2).
+export const todoOriginEnum = pgEnum("todo_origin", ["heading", "crew"]);
+
 export const objectiveStatusEnum = pgEnum("objective_status", [
   "not_started",
   "in_progress",
@@ -196,6 +200,10 @@ export const todos = pgTable("todos", {
   // hasn't been pushed to Crew (integration off, or push failed — graceful
   // degradation, retried on next write).
   crewTaskId: text("crew_task_id"),
+  // "heading" = created here and pushed to Crew; "crew" = an existing Crew task
+  // linked into this goal (S2). Drives whether we created the Crew task or
+  // adopted it.
+  origin: todoOriginEnum("origin").default("heading").notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });

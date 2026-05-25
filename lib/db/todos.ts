@@ -2,7 +2,11 @@ import { db } from "@/lib/db";
 import { todos, goals, Todo, NewTodo } from "@/lib/db/schema";
 import { eq, and, desc, asc } from "drizzle-orm";
 import { markGoalStarted } from "@/lib/db/goals";
-import { createCrewTask, completeCrewTask } from "@/lib/integrations/crew";
+import {
+  createCrewTask,
+  completeCrewTask,
+  linkCrewTask,
+} from "@/lib/integrations/crew";
 
 export async function getTodosByUserId(
   userId: string,
@@ -176,6 +180,59 @@ export async function linkTodoToCrew(todo: Todo): Promise<Todo> {
     .where(eq(todos.id, todo.id))
     .returning();
   return updated ?? todo;
+}
+
+export type LinkCrewTaskResult =
+  | { ok: true; todo: Todo }
+  | { ok: false; reason: "goal_not_found" | "conflict" | "error" };
+
+/**
+ * Link an existing Crew task to a goal (S2). Creates a thin local `crew`-origin
+ * todo, then adopts the Crew task (stamps it with this todo's id as the
+ * external link) so completion syncs both ways like a Heading-origin todo.
+ *
+ * Unlike `createTodo`, the Crew call is NOT best-effort: if adoption fails the
+ * local row is rolled back, because a crew-origin todo with no working link is
+ * a dead row the user can't act on.
+ */
+export async function linkExistingCrewTask(
+  data: {
+    goalId: string;
+    milestoneId?: string | null;
+    crewTaskId: string;
+    title: string;
+    dueDate?: string | null;
+  },
+  userId: string
+): Promise<LinkCrewTaskResult> {
+  const goal = await db.query.goals.findFirst({
+    where: and(eq(goals.id, data.goalId), eq(goals.userId, userId)),
+  });
+  if (!goal) {
+    return { ok: false, reason: "goal_not_found" };
+  }
+
+  const [todo] = await db
+    .insert(todos)
+    .values({
+      goalId: data.goalId,
+      milestoneId: data.milestoneId ?? null,
+      title: data.title,
+      dueDate: data.dueDate ? new Date(data.dueDate) : null,
+      completed: false,
+      crewTaskId: data.crewTaskId,
+      origin: "crew",
+    })
+    .returning();
+
+  const result = await linkCrewTask(data.crewTaskId, todo.id);
+  if (result !== "ok") {
+    // Roll back the dead local row so the user can retry cleanly.
+    await db.delete(todos).where(eq(todos.id, todo.id));
+    return { ok: false, reason: result };
+  }
+
+  return { ok: true, todo };
 }
 
 export async function updateTodo(
