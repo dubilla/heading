@@ -45,3 +45,6 @@ next-env.d.ts
 PRD.md
 BACKLOG.md
 .env*.local
+
+# Dev server logs
+/logs
