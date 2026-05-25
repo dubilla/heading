@@ -3,6 +3,7 @@ import { getAuthUserId } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { milestones, todos } from "@/lib/db/schema";
 import { getSessionById, completeSession } from "@/lib/db/planning-sessions";
+import { linkTodoToCrew } from "@/lib/db/todos";
 import { z } from "zod";
 
 const milestoneSchema = z.object({
@@ -105,6 +106,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             completed: false,
           })
           .returning();
+        // Push to Crew like any other Heading-origin todo (best-effort).
+        await linkTodoToCrew(created);
         createdTodos.push(created.id);
       }
     }

@@ -17,6 +17,13 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
+  // Machine-to-machine integration callbacks (e.g. Crew's completion webhook)
+  // authenticate themselves with a shared secret inside the handler, so they
+  // must bypass session-based redirects.
+  if (req.nextUrl.pathname.startsWith("/api/integrations/")) {
+    return NextResponse.next();
+  }
+
   // Allow API requests with admin API key
   if (isApiRoute && process.env.ADMIN_API_KEY) {
     const authHeader = req.headers.get("authorization");
