@@ -123,7 +123,7 @@ export function TodoItem({ todo }: TodoItemProps) {
                   d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4z"
                 />
               </svg>
-              In Crew
+              {todo.origin === "crew" ? "Linked from Crew" : "In Crew"}
             </span>
           )}
         </div>

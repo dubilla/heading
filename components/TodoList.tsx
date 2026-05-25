@@ -10,6 +10,7 @@ interface TodoListProps {
   goalId?: string;
   milestoneId?: string;
   showAddForm?: boolean;
+  crewEnabled?: boolean;
 }
 
 export function TodoList({
@@ -17,6 +18,7 @@ export function TodoList({
   goalId,
   milestoneId,
   showAddForm = true,
+  crewEnabled = false,
 }: TodoListProps) {
   const [showForm, setShowForm] = useState(false);
 
@@ -55,6 +57,7 @@ export function TodoList({
           <TodoForm
             goalId={goalId}
             milestoneId={milestoneId}
+            crewEnabled={crewEnabled}
             onSuccess={() => {
               setShowForm(false);
               window.location.reload();

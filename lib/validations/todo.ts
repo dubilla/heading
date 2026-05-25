@@ -37,5 +37,17 @@ export const updateTodoSchema = z.object({
   milestoneId: z.string().uuid("Invalid milestone ID").optional().nullable(),
 });
 
+export const linkCrewTaskSchema = z.object({
+  goalId: z.string().uuid("Invalid goal ID"),
+  milestoneId: z.string().uuid("Invalid milestone ID").optional().nullable(),
+  crewTaskId: z.string().min(1, "Crew task is required"),
+  title: z
+    .string()
+    .min(1, "Title is required")
+    .max(200, "Title must be 200 characters or less"),
+  dueDate: z.string().optional().nullable(),
+});
+
 export type CreateTodoInput = z.infer<typeof createTodoSchema>;
 export type UpdateTodoInput = z.infer<typeof updateTodoSchema>;
+export type LinkCrewTaskInput = z.infer<typeof linkCrewTaskSchema>;
