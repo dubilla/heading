@@ -6,6 +6,7 @@ import {
   NewProgressUpdate,
 } from "@/lib/db/schema";
 import { and, desc, eq, inArray } from "drizzle-orm";
+import { markGoalStarted } from "@/lib/db/goals";
 
 /**
  * List all progress updates for a goal, newest-occurred first.
@@ -92,6 +93,10 @@ export async function createProgressUpdate(
     .insert(progressUpdates)
     .values({ ...data, userId })
     .returning();
+
+  // First progress signal starts the goal.
+  await markGoalStarted(data.goalId);
+
   return row;
 }
 

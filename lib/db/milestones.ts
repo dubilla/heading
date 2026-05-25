@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { milestones, goals, Milestone, NewMilestone } from "@/lib/db/schema";
 import { eq, and, asc, inArray, count } from "drizzle-orm";
+import { markGoalStarted } from "@/lib/db/goals";
 
 export async function getMilestonesByGoalId(
   goalId: string,
@@ -78,6 +79,11 @@ export async function updateMilestone(
     .set({ ...data, updatedAt: new Date() })
     .where(eq(milestones.id, id))
     .returning();
+
+  // Completing a milestone is a progress signal that starts the goal.
+  if (data.status === "completed") {
+    await markGoalStarted(existingMilestone.goalId);
+  }
 
   return milestone || null;
 }

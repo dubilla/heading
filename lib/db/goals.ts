@@ -68,6 +68,19 @@ export async function updateGoal(
   return goal || null;
 }
 
+/**
+ * Move a goal from `not_started` to `in_progress` on its first sign of
+ * activity (a progress update, a completed todo, or a completed milestone).
+ * Idempotent: a no-op once the goal has left `not_started`, so callers can
+ * fire it unconditionally after a successful write.
+ */
+export async function markGoalStarted(goalId: string): Promise<void> {
+  await db
+    .update(goals)
+    .set({ status: "in_progress", updatedAt: new Date() })
+    .where(and(eq(goals.id, goalId), eq(goals.status, "not_started")));
+}
+
 export async function deleteGoal(id: string, userId: string): Promise<boolean> {
   const result = await db
     .delete(goals)

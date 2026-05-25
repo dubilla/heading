@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { todos, goals, Todo, NewTodo } from "@/lib/db/schema";
 import { eq, and, desc, asc } from "drizzle-orm";
+import { markGoalStarted } from "@/lib/db/goals";
 
 export async function getTodosByUserId(
   userId: string,
@@ -183,6 +184,11 @@ export async function updateTodo(
     .set(updateData)
     .where(eq(todos.id, id))
     .returning();
+
+  // Completing a todo is a progress signal that starts the goal.
+  if (data.completed === true) {
+    await markGoalStarted(existingTodo.goalId);
+  }
 
   return todo || null;
 }
