@@ -89,10 +89,10 @@ export default async function GoalDetailPage({ params }: PageProps) {
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex items-start justify-between mb-4">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
+            <div className="min-w-0">
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-gray-900 min-w-0 break-words">
                   {goal.title}
                 </h1>
                 <StatusBadge status={goal.status} />
