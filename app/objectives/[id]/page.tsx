@@ -64,11 +64,11 @@ export default async function ObjectiveDetailPage({ params }: PageProps) {
             border: "1px solid var(--border-primary)",
           }}
         >
-          <div className="flex items-start justify-between mb-4">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
+            <div className="min-w-0">
               <div className="flex items-center gap-3 mb-2">
                 <h1
-                  className="text-3xl font-bold"
+                  className="text-3xl font-bold min-w-0 break-words"
                   style={{
                     fontFamily: "var(--font-display)",
                     color: "var(--text-primary)",
