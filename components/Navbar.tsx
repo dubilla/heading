@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface NavbarProps {
   userName?: string | null;
@@ -13,10 +13,14 @@ export function Navbar({ userName }: NavbarProps) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Close the mobile menu on any navigation (link tap, logo, back/forward).
-  useEffect(() => {
+  // Close the mobile menu on any navigation (link tap, logo, back/forward) by
+  // resetting state during render when the route changes, per React guidance
+  // (https://react.dev/learn/you-might-not-need-an-effect).
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
     setMobileMenuOpen(false);
-  }, [pathname]);
+  }
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
