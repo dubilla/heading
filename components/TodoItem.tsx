@@ -14,10 +14,35 @@ interface TodoItemProps {
   showGoalInfo?: boolean;
 }
 
+function toLocalDateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function getPresetDateString(preset: "today" | "tomorrow" | "next-week"): string {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  if (preset === "tomorrow") {
+    date.setDate(date.getDate() + 1);
+  } else if (preset === "next-week") {
+    date.setDate(date.getDate() + 7);
+  }
+  return toLocalDateString(date);
+}
+
 export function TodoItem({ todo, showGoalInfo = true }: TodoItemProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showReschedule, setShowReschedule] = useState(false);
+  const [rescheduling, setRescheduling] = useState(false);
+
+  const closeMenu = () => {
+    setShowMenu(false);
+    setShowReschedule(false);
+  };
 
   const handleToggle = async () => {
     setLoading(true);
@@ -48,7 +73,26 @@ export function TodoItem({ todo, showGoalInfo = true }: TodoItemProps) {
     } catch (error) {
       console.error("Error deleting todo:", error);
     }
-    setShowMenu(false);
+    closeMenu();
+  };
+
+  const handleReschedule = async (dueDate: string | null) => {
+    setRescheduling(true);
+    try {
+      const response = await fetch(`/api/todos/${todo.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dueDate }),
+      });
+      if (response.ok) {
+        closeMenu();
+        router.refresh();
+      }
+    } catch (error) {
+      console.error("Error rescheduling todo:", error);
+    } finally {
+      setRescheduling(false);
+    }
   };
 
   const overdue =
@@ -143,7 +187,11 @@ export function TodoItem({ todo, showGoalInfo = true }: TodoItemProps) {
 
       <div className="relative">
         <button
-          onClick={() => setShowMenu(!showMenu)}
+          onClick={() => {
+            setShowMenu(!showMenu);
+            setShowReschedule(false);
+          }}
+          aria-label="Todo actions"
           className="cursor-pointer p-1 text-gray-400 hover:text-gray-600 rounded"
         >
           <svg
@@ -165,15 +213,87 @@ export function TodoItem({ todo, showGoalInfo = true }: TodoItemProps) {
           <>
             <div
               className="fixed inset-0 z-10"
-              onClick={() => setShowMenu(false)}
+              onClick={closeMenu}
             />
-            <div className="absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
-              <button
-                onClick={handleDelete}
-                className="cursor-pointer w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-gray-100 rounded-lg"
-              >
-                Delete
-              </button>
+            <div className="absolute right-0 mt-1 w-52 bg-white rounded-lg shadow-lg border border-gray-200 z-20 py-1">
+              {showReschedule ? (
+                <div className="px-1">
+                  <p className="px-3 pt-1 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    Reschedule
+                  </p>
+                  <button
+                    onClick={() => handleReschedule(getPresetDateString("today"))}
+                    disabled={rescheduling}
+                    className="cursor-pointer w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded disabled:opacity-50"
+                  >
+                    Today
+                  </button>
+                  <button
+                    onClick={() => handleReschedule(getPresetDateString("tomorrow"))}
+                    disabled={rescheduling}
+                    className="cursor-pointer w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded disabled:opacity-50"
+                  >
+                    Tomorrow
+                  </button>
+                  <button
+                    onClick={() => handleReschedule(getPresetDateString("next-week"))}
+                    disabled={rescheduling}
+                    className="cursor-pointer w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded disabled:opacity-50"
+                  >
+                    Next week
+                  </button>
+                  <div className="px-3 py-2">
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      Pick a date
+                    </label>
+                    <input
+                      type="date"
+                      aria-label="Pick a date"
+                      disabled={rescheduling}
+                      defaultValue={
+                        todo.dueDate
+                          ? toLocalDateString(new Date(todo.dueDate))
+                          : ""
+                      }
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          handleReschedule(e.target.value);
+                        }
+                      }}
+                      className="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                    />
+                  </div>
+                  <button
+                    onClick={() => handleReschedule(null)}
+                    disabled={rescheduling || !todo.dueDate}
+                    className="cursor-pointer w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Clear due date
+                  </button>
+                  <div className="my-1 h-px bg-gray-200" />
+                  <button
+                    onClick={() => setShowReschedule(false)}
+                    className="cursor-pointer w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 rounded"
+                  >
+                    Back
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setShowReschedule(true)}
+                    className="cursor-pointer w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Reschedule
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="cursor-pointer w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-gray-100"
+                  >
+                    Delete
+                  </button>
+                </>
+              )}
             </div>
           </>
         )}
