@@ -2,15 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Todo } from "@/lib/db/schema";
 import { formatDate, isOverdue } from "@/lib/utils/date-helpers";
 
 interface TodoItemProps {
-  todo: Todo;
+  todo: Todo & { goal?: { id: string; title: string } | null };
+  // Default true so the dashboard and /todos lists — which mix todos across
+  // many goals — link back to each parent. Goal-detail pages set this to false
+  // because the goal context is already visible.
   showGoalInfo?: boolean;
 }
 
-export function TodoItem({ todo }: TodoItemProps) {
+export function TodoItem({ todo, showGoalInfo = true }: TodoItemProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -97,7 +101,15 @@ export function TodoItem({ todo }: TodoItemProps) {
             {todo.description}
           </p>
         )}
-        <div className="flex items-center gap-3 mt-1">
+        <div className="flex items-center gap-3 mt-1 flex-wrap">
+          {showGoalInfo && todo.goal && (
+            <Link
+              href={`/goals/${todo.goal.id}`}
+              className="text-xs text-blue-600 hover:text-blue-700 hover:underline truncate max-w-[16rem]"
+            >
+              Goal: {todo.goal.title}
+            </Link>
+          )}
           {todo.dueDate && (
             <span
               className={`text-xs ${

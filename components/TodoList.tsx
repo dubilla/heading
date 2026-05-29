@@ -97,7 +97,7 @@ export function TodoList({
           {pendingTodos.length > 0 && (
             <div className="space-y-2">
               {pendingTodos.map((todo) => (
-                <TodoItem key={todo.id} todo={todo} />
+                <TodoItem key={todo.id} todo={todo} showGoalInfo={false} />
               ))}
             </div>
           )}
@@ -109,7 +109,7 @@ export function TodoList({
               </h3>
               <div className="space-y-2">
                 {completedTodos.map((todo) => (
-                  <TodoItem key={todo.id} todo={todo} />
+                  <TodoItem key={todo.id} todo={todo} showGoalInfo={false} />
                 ))}
               </div>
             </div>

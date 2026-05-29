@@ -8,6 +8,10 @@ import {
   linkCrewTask,
 } from "@/lib/integrations/crew";
 
+export type TodoWithGoal = Todo & {
+  goal: { id: string; title: string };
+};
+
 export async function getTodosByUserId(
   userId: string,
   options?: {
@@ -17,29 +21,35 @@ export async function getTodosByUserId(
     dueBefore?: Date;
     dueAfter?: Date;
   }
-): Promise<Todo[]> {
-  // Get all goal IDs for this user
+): Promise<TodoWithGoal[]> {
+  // Get all goals for this user (need title to render the "Goal: <title>"
+  // backlink on each todo).
   const userGoals = await db.query.goals.findMany({
     where: eq(goals.userId, userId),
-    columns: { id: true },
+    columns: { id: true, title: true },
   });
-  const goalIds = userGoals.map((g) => g.id);
 
-  if (goalIds.length === 0) {
+  if (userGoals.length === 0) {
     return [];
   }
 
-  let allTodos: Todo[] = [];
+  let allTodos: TodoWithGoal[] = [];
 
   // Fetch todos for each goal (Drizzle doesn't support IN with subquery easily)
-  for (const goalId of goalIds) {
-    if (options?.goalId && goalId !== options.goalId) continue;
+  for (const goal of userGoals) {
+    if (options?.goalId && goal.id !== options.goalId) continue;
 
     const goalTodos = await db.query.todos.findMany({
-      where: eq(todos.goalId, goalId),
+      where: eq(todos.goalId, goal.id),
       orderBy: [asc(todos.dueDate), desc(todos.createdAt)],
     });
-    allTodos = [...allTodos, ...goalTodos];
+    allTodos = [
+      ...allTodos,
+      ...goalTodos.map((t) => ({
+        ...t,
+        goal: { id: goal.id, title: goal.title },
+      })),
+    ];
   }
 
   // Apply filters
