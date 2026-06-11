@@ -48,3 +48,4 @@ BACKLOG.md
 
 # Dev server logs
 /logs
+.playwright-mcp/

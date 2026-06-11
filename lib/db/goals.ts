@@ -89,6 +89,32 @@ export async function deleteGoal(id: string, userId: string): Promise<boolean> {
   return result.length > 0;
 }
 
+/**
+ * Goals that should be refreshed during the weekly check-in: active goals
+ * whose latest progress update predates `since` (typically the current week's
+ * start). Goals created after `since` aren't stale — their start value IS this
+ * week's signal.
+ */
+export function filterGoalsNeedingUpdate(
+  goals: GoalWithLatestUpdate[],
+  since: Date
+): GoalWithLatestUpdate[] {
+  return goals.filter((goal) => {
+    if (goal.status === "completed") return false;
+    if (goal.createdAt >= since) return false;
+    if (!goal.latestProgressUpdate) return true;
+    return goal.latestProgressUpdate.occurredAt < since;
+  });
+}
+
+export async function getGoalsNeedingUpdate(
+  userId: string,
+  since: Date
+): Promise<GoalWithLatestUpdate[]> {
+  const goals = await getGoalsByUserIdWithLatestUpdate(userId);
+  return filterGoalsNeedingUpdate(goals, since);
+}
+
 export async function getGoalStats(userId: string) {
   const userGoals = await getGoalsByUserId(userId);
   const total = userGoals.length;
