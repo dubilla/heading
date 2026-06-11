@@ -4,15 +4,28 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getWeekStartDate, formatWeekRange } from "@/lib/utils/week-helpers";
 
-interface CheckInFormProps {
-  onSuccess?: () => void;
+export interface ExistingCheckIn {
+  id: string;
+  accomplishments: string;
+  challenges: string;
+  nextWeekPriorities: string;
+  needsAdjustment: boolean;
 }
 
-export function CheckInForm({ onSuccess }: CheckInFormProps) {
+interface CheckInFormProps {
+  onSuccess?: () => void;
+  // When set, the form amends this (current-week) check-in instead of
+  // creating one.
+  checkIn?: ExistingCheckIn;
+}
+
+export function CheckInForm({ onSuccess, checkIn }: CheckInFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [needsAdjustment, setNeedsAdjustment] = useState(false);
+  const [needsAdjustment, setNeedsAdjustment] = useState(
+    checkIn?.needsAdjustment ?? false
+  );
 
   const weekStartDate = getWeekStartDate();
 
@@ -22,17 +35,23 @@ export function CheckInForm({ onSuccess }: CheckInFormProps) {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const data = {
-      weekStartDate: weekStartDate.toISOString(),
+    const fields = {
       accomplishments: formData.get("accomplishments") as string,
       challenges: formData.get("challenges") as string,
       nextWeekPriorities: formData.get("nextWeekPriorities") as string,
       needsAdjustment,
     };
+    const [url, method, data] = checkIn
+      ? [`/api/check-ins/${checkIn.id}`, "PATCH", fields]
+      : [
+          "/api/check-ins",
+          "POST",
+          { weekStartDate: weekStartDate.toISOString(), ...fields },
+        ];
 
     try {
-      const response = await fetch("/api/check-ins", {
-        method: "POST",
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
@@ -85,6 +104,7 @@ export function CheckInForm({ onSuccess }: CheckInFormProps) {
           required
           rows={4}
           maxLength={5000}
+          defaultValue={checkIn?.accomplishments}
           className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           placeholder="List your achievements, completed tasks, and progress made..."
         />
@@ -103,6 +123,7 @@ export function CheckInForm({ onSuccess }: CheckInFormProps) {
           required
           rows={4}
           maxLength={5000}
+          defaultValue={checkIn?.challenges}
           className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           placeholder="Describe any obstacles, setbacks, or difficulties you encountered..."
         />
@@ -122,6 +143,7 @@ export function CheckInForm({ onSuccess }: CheckInFormProps) {
           required
           rows={4}
           maxLength={5000}
+          defaultValue={checkIn?.nextWeekPriorities}
           className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           placeholder="List the tasks and goals you want to focus on next week..."
         />
@@ -153,7 +175,7 @@ export function CheckInForm({ onSuccess }: CheckInFormProps) {
           disabled={loading}
           className="cursor-pointer rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? "Saving..." : "Submit Check-in"}
+          {loading ? "Saving..." : checkIn ? "Save Changes" : "Submit Check-in"}
         </button>
       </div>
     </form>
