@@ -20,3 +20,10 @@ export const createCheckInSchema = z.object({
 });
 
 export type CreateCheckInInput = z.infer<typeof createCheckInSchema>;
+
+// Amending never moves a check-in to another week, so weekStartDate stays out.
+export const updateCheckInSchema = createCheckInSchema.omit({
+  weekStartDate: true,
+});
+
+export type UpdateCheckInInput = z.infer<typeof updateCheckInSchema>;
