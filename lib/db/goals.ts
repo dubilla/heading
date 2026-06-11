@@ -1,5 +1,11 @@
 import { db } from "@/lib/db";
-import { goals, Goal, NewGoal, ProgressUpdate } from "@/lib/db/schema";
+import {
+  goals,
+  objectives,
+  Goal,
+  NewGoal,
+  ProgressUpdate,
+} from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import {
   getLatestProgressUpdatesForGoals,
@@ -48,9 +54,31 @@ export async function getGoalByIdWithLatestUpdate(
   return { ...goal, latestProgressUpdate };
 }
 
+/**
+ * An objectiveId is caller-supplied input: it must be proven to belong to the
+ * same user before persisting the reference, or any user could attach their
+ * goals to another user's objective by guessing its UUID.
+ */
+async function objectiveOwnedByUser(
+  objectiveId: string,
+  userId: string
+): Promise<boolean> {
+  const objective = await db.query.objectives.findFirst({
+    where: and(eq(objectives.id, objectiveId), eq(objectives.userId, userId)),
+  });
+  return !!objective;
+}
+
 export async function createGoal(
   data: Omit<NewGoal, "id" | "createdAt" | "updatedAt">
-): Promise<Goal> {
+): Promise<Goal | null> {
+  if (
+    data.objectiveId &&
+    !(await objectiveOwnedByUser(data.objectiveId, data.userId))
+  ) {
+    return null;
+  }
+
   const [goal] = await db.insert(goals).values(data).returning();
   return goal;
 }
@@ -60,6 +88,13 @@ export async function updateGoal(
   userId: string,
   data: Partial<Omit<NewGoal, "id" | "userId" | "createdAt">>
 ): Promise<Goal | null> {
+  if (
+    data.objectiveId &&
+    !(await objectiveOwnedByUser(data.objectiveId, userId))
+  ) {
+    return null;
+  }
+
   const [goal] = await db
     .update(goals)
     .set({ ...data, updatedAt: new Date() })

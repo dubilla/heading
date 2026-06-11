@@ -51,6 +51,13 @@ export async function POST(request: NextRequest) {
       status: "not_started",
     });
 
+    if (!goal) {
+      return NextResponse.json(
+        { error: "Objective not found" },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json({ data: goal }, { status: 201 });
   } catch (error) {
     console.error("Error creating goal:", error);

@@ -292,6 +292,12 @@ server.tool(
       unit: unit ?? "%",
       status: "not_started",
     });
+    if (!goal) {
+      return {
+        content: [{ type: "text" as const, text: "Objective not found." }],
+        isError: true,
+      };
+    }
     return {
       content: [{ type: "text" as const, text: JSON.stringify(goal, null, 2) }],
     };
@@ -348,7 +354,9 @@ server.tool(
     const goal = await updateGoal(id, USER_ID, data);
     if (!goal) {
       return {
-        content: [{ type: "text" as const, text: "Goal not found." }],
+        content: [
+          { type: "text" as const, text: "Goal or objective not found." },
+        ],
         isError: true,
       };
     }
@@ -546,7 +554,7 @@ server.tool(
         content: [
           {
             type: "text" as const,
-            text: "Failed to create todo. Check that the goal exists.",
+            text: "Failed to create todo. Check that the goal and milestone exist.",
           },
         ],
         isError: true,

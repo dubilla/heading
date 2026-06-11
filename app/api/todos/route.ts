@@ -62,7 +62,10 @@ export async function POST(request: NextRequest) {
     );
 
     if (!todo) {
-      return NextResponse.json({ error: "Goal not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Goal or milestone not found" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({ data: todo }, { status: 201 });

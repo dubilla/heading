@@ -29,6 +29,13 @@
       "when": 1779751579695,
       "tag": "0003_thick_vulcan",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1781138603220,
+      "tag": "0004_chunky_proemial_gods",
+      "breakpoints": true
     }
   ]
 }

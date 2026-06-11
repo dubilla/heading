@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { todos, goals, Todo, NewTodo } from "@/lib/db/schema";
+import { todos, goals, milestones, Todo, NewTodo } from "@/lib/db/schema";
 import { eq, and, desc, asc } from "drizzle-orm";
 import { markGoalStarted } from "@/lib/db/goals";
 import {
@@ -146,6 +146,21 @@ export async function getTodoById(
   return todo;
 }
 
+/**
+ * A milestoneId is caller-supplied input: it must be proven to belong to the
+ * goal being written (which the caller has already scoped to the user), or any
+ * user could attach todos to another user's milestone by guessing its UUID.
+ */
+async function milestoneBelongsToGoal(
+  milestoneId: string,
+  goalId: string
+): Promise<boolean> {
+  const milestone = await db.query.milestones.findFirst({
+    where: and(eq(milestones.id, milestoneId), eq(milestones.goalId, goalId)),
+  });
+  return !!milestone;
+}
+
 export async function createTodo(
   data: Omit<
     NewTodo,
@@ -159,6 +174,13 @@ export async function createTodo(
   });
 
   if (!goal) {
+    return null;
+  }
+
+  if (
+    data.milestoneId &&
+    !(await milestoneBelongsToGoal(data.milestoneId, data.goalId))
+  ) {
     return null;
   }
 
@@ -194,7 +216,10 @@ export async function linkTodoToCrew(todo: Todo): Promise<Todo> {
 
 export type LinkCrewTaskResult =
   | { ok: true; todo: Todo }
-  | { ok: false; reason: "goal_not_found" | "conflict" | "error" };
+  | {
+      ok: false;
+      reason: "goal_not_found" | "milestone_not_found" | "conflict" | "error";
+    };
 
 /**
  * Link an existing Crew task to a goal (S2). Creates a thin local `crew`-origin
@@ -220,6 +245,13 @@ export async function linkExistingCrewTask(
   });
   if (!goal) {
     return { ok: false, reason: "goal_not_found" };
+  }
+
+  if (
+    data.milestoneId &&
+    !(await milestoneBelongsToGoal(data.milestoneId, data.goalId))
+  ) {
+    return { ok: false, reason: "milestone_not_found" };
   }
 
   const [todo] = await db
@@ -253,6 +285,13 @@ export async function updateTodo(
   const existingTodo = await getTodoById(id, userId);
 
   if (!existingTodo) {
+    return null;
+  }
+
+  if (
+    data.milestoneId &&
+    !(await milestoneBelongsToGoal(data.milestoneId, existingTodo.goalId))
+  ) {
     return null;
   }
 

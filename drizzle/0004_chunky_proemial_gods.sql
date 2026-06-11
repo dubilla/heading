@@ -1,0 +1,2 @@
+ALTER TABLE "check_ins" ADD COLUMN "updated_at" timestamp DEFAULT now() NOT NULL;--> statement-breakpoint
+ALTER TABLE "check_ins" ADD CONSTRAINT "check_ins_user_id_week_start_date_uq" UNIQUE("user_id","week_start_date");

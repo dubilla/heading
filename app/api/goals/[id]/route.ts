@@ -59,6 +59,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     const goal = await updateGoal(id, userId, parsed.data);
 
+    // The goal itself was just verified, so a null here means the supplied
+    // objectiveId doesn't belong to this user.
+    if (!goal) {
+      return NextResponse.json(
+        { error: "Objective not found" },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json({ data: goal });
   } catch (error) {
     console.error("Error updating goal:", error);
