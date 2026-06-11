@@ -162,6 +162,54 @@ export async function linkCrewTask(
 }
 
 /**
+ * Mirror Heading-side content edits (title/description/due date) to the linked
+ * Crew task. Best-effort like the rest of the client: failures are logged and
+ * the local edit stands — Crew catches up on the next write.
+ */
+export async function updateCrewTask(
+  crewTaskId: string,
+  changes: {
+    title?: string;
+    description?: string | null;
+    dueDate?: Date | null;
+  }
+): Promise<void> {
+  const config = crewConfig();
+  if (!config) return;
+
+  const body: Record<string, string | null> = {};
+  if (changes.title !== undefined) body.title = changes.title;
+  if (changes.description !== undefined) {
+    body.description = changes.description;
+  }
+  if (changes.dueDate !== undefined) {
+    body.dueDate = changes.dueDate
+      ? toCrewDate(new Date(changes.dueDate))
+      : null;
+  }
+  if (Object.keys(body).length === 0) return;
+
+  try {
+    const response = await fetch(
+      `${config.apiUrl}/api/v1/tasks/${crewTaskId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${config.token}`,
+        },
+        body: JSON.stringify(body),
+      }
+    );
+    if (!response.ok) {
+      console.error(`Crew task update failed with status ${response.status}`);
+    }
+  } catch (err) {
+    console.error("Crew task update failed:", err);
+  }
+}
+
+/**
  * Mirror a Heading-side completion to Crew. Best-effort and idempotent: Crew
  * returns 409 if the task is already complete, which we treat as benign.
  */

@@ -6,6 +6,7 @@ import {
   createCrewTask,
   completeCrewTask,
   linkCrewTask,
+  updateCrewTask,
 } from "@/lib/integrations/crew";
 
 export type TodoWithGoal = Todo & {
@@ -325,6 +326,18 @@ export async function updateTodo(
     if (existingTodo.crewTaskId) {
       await completeCrewTask(existingTodo.crewTaskId);
     }
+  }
+
+  // Mirror content edits to the linked Crew task (best-effort). Keyed on which
+  // fields the caller sent, so completion-only toggles don't touch Crew.
+  const contentChanged =
+    "title" in data || "description" in data || "dueDate" in data;
+  if (todo && existingTodo.crewTaskId && contentChanged) {
+    await updateCrewTask(existingTodo.crewTaskId, {
+      title: data.title,
+      description: data.description,
+      dueDate: data.dueDate,
+    });
   }
 
   return todo || null;

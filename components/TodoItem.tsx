@@ -21,7 +21,9 @@ function toLocalDateString(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-function getPresetDateString(preset: "today" | "tomorrow" | "next-week"): string {
+function getPresetDateString(
+  preset: "today" | "tomorrow" | "next-week"
+): string {
   const date = new Date();
   date.setHours(0, 0, 0, 0);
   if (preset === "tomorrow") {
@@ -32,16 +34,89 @@ function getPresetDateString(preset: "today" | "tomorrow" | "next-week"): string
   return toLocalDateString(date);
 }
 
+type MilestoneOption = { id: string; title: string };
+
 export function TodoItem({ todo, showGoalInfo = true }: TodoItemProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showReschedule, setShowReschedule] = useState(false);
   const [rescheduling, setRescheduling] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(todo.title);
+  const [editDescription, setEditDescription] = useState(
+    todo.description ?? ""
+  );
+  const [editDueDate, setEditDueDate] = useState(
+    todo.dueDate ? toLocalDateString(new Date(todo.dueDate)) : ""
+  );
+  const [editMilestoneId, setEditMilestoneId] = useState(
+    todo.milestoneId ?? ""
+  );
+  const [milestoneOptions, setMilestoneOptions] = useState<
+    MilestoneOption[] | null
+  >(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const closeMenu = () => {
     setShowMenu(false);
     setShowReschedule(false);
+  };
+
+  const startEdit = async () => {
+    closeMenu();
+    setEditTitle(todo.title);
+    setEditDescription(todo.description ?? "");
+    setEditDueDate(
+      todo.dueDate ? toLocalDateString(new Date(todo.dueDate)) : ""
+    );
+    setEditMilestoneId(todo.milestoneId ?? "");
+    setEditError(null);
+    setEditing(true);
+    try {
+      const response = await fetch(`/api/goals/${todo.goalId}/milestones`);
+      if (response.ok) {
+        const result = await response.json();
+        setMilestoneOptions(result.data ?? []);
+      } else {
+        setMilestoneOptions([]);
+      }
+    } catch {
+      setMilestoneOptions([]);
+    }
+  };
+
+  const handleEditSave = async () => {
+    if (!editTitle.trim()) {
+      setEditError("Title is required");
+      return;
+    }
+    setEditError(null);
+    setSavingEdit(true);
+    try {
+      const response = await fetch(`/api/todos/${todo.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          description: editDescription.trim() || null,
+          dueDate: editDueDate || null,
+          milestoneId: editMilestoneId || null,
+        }),
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}));
+        setEditError(result.error || "Something went wrong");
+        return;
+      }
+      setEditing(false);
+      router.refresh();
+    } catch {
+      setEditError("Something went wrong");
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   const handleToggle = async () => {
@@ -97,6 +172,77 @@ export function TodoItem({ todo, showGoalInfo = true }: TodoItemProps) {
 
   const overdue =
     todo.dueDate && !todo.completed && isOverdue(new Date(todo.dueDate));
+
+  if (editing) {
+    return (
+      <div className="p-3 rounded-lg border bg-white border-blue-300 space-y-3">
+        <input
+          type="text"
+          value={editTitle}
+          onChange={(e) => setEditTitle(e.target.value)}
+          maxLength={200}
+          aria-label="Todo title"
+          className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        <textarea
+          value={editDescription}
+          onChange={(e) => setEditDescription(e.target.value)}
+          maxLength={1000}
+          rows={2}
+          placeholder="Description (optional)"
+          aria-label="Todo description"
+          className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="date"
+            value={editDueDate}
+            onChange={(e) => setEditDueDate(e.target.value)}
+            aria-label="Todo due date"
+            className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          {milestoneOptions && milestoneOptions.length > 0 && (
+            <select
+              value={editMilestoneId}
+              onChange={(e) => setEditMilestoneId(e.target.value)}
+              aria-label="Todo milestone"
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">No milestone</option>
+              {milestoneOptions.map((milestone) => (
+                <option key={milestone.id} value={milestone.id}>
+                  {milestone.title}
+                </option>
+              ))}
+            </select>
+          )}
+          <div className="flex gap-2 sm:ml-auto">
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              disabled={savingEdit}
+              className="cursor-pointer rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleEditSave}
+              disabled={savingEdit}
+              className="cursor-pointer rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {savingEdit ? "Saving..." : "Save"}
+            </button>
+          </div>
+        </div>
+        {editError && (
+          <p className="text-sm text-red-500" role="alert">
+            {editError}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -211,10 +357,7 @@ export function TodoItem({ todo, showGoalInfo = true }: TodoItemProps) {
 
         {showMenu && (
           <>
-            <div
-              className="fixed inset-0 z-10"
-              onClick={closeMenu}
-            />
+            <div className="fixed inset-0 z-10" onClick={closeMenu} />
             <div className="absolute right-0 mt-1 w-52 bg-white rounded-lg shadow-lg border border-gray-200 z-20 py-1">
               {showReschedule ? (
                 <div className="px-1">
@@ -222,21 +365,27 @@ export function TodoItem({ todo, showGoalInfo = true }: TodoItemProps) {
                     Reschedule
                   </p>
                   <button
-                    onClick={() => handleReschedule(getPresetDateString("today"))}
+                    onClick={() =>
+                      handleReschedule(getPresetDateString("today"))
+                    }
                     disabled={rescheduling}
                     className="cursor-pointer w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded disabled:opacity-50"
                   >
                     Today
                   </button>
                   <button
-                    onClick={() => handleReschedule(getPresetDateString("tomorrow"))}
+                    onClick={() =>
+                      handleReschedule(getPresetDateString("tomorrow"))
+                    }
                     disabled={rescheduling}
                     className="cursor-pointer w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded disabled:opacity-50"
                   >
                     Tomorrow
                   </button>
                   <button
-                    onClick={() => handleReschedule(getPresetDateString("next-week"))}
+                    onClick={() =>
+                      handleReschedule(getPresetDateString("next-week"))
+                    }
                     disabled={rescheduling}
                     className="cursor-pointer w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded disabled:opacity-50"
                   >
@@ -280,6 +429,12 @@ export function TodoItem({ todo, showGoalInfo = true }: TodoItemProps) {
                 </div>
               ) : (
                 <>
+                  <button
+                    onClick={startEdit}
+                    className="cursor-pointer w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Edit
+                  </button>
                   <button
                     onClick={() => setShowReschedule(true)}
                     className="cursor-pointer w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"

@@ -166,3 +166,95 @@ describe("TodoItem reschedule menu", () => {
     expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
   });
 });
+
+describe("TodoItem edit flow", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    global.fetch = jest.fn().mockImplementation((url: string) => {
+      if (url.includes("/milestones")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            data: [{ id: "milestone-1", title: "Q2: First draft" }],
+          }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    }) as jest.Mock;
+  });
+
+  async function openEditForm() {
+    fireEvent.click(screen.getByRole("button", { name: "Todo actions" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Todo title")).toBeInTheDocument()
+    );
+  }
+
+  it("saves edited title, description, due date, and milestone", async () => {
+    render(<TodoItem todo={makeTodo({ dueDate: new Date("2026-06-15") })} />);
+    await openEditForm();
+
+    // Milestones for the parent goal were fetched to populate the select.
+    await waitFor(() =>
+      expect(screen.getByLabelText("Todo milestone")).toBeInTheDocument()
+    );
+
+    fireEvent.change(screen.getByLabelText("Todo title"), {
+      target: { value: "Write better tests" },
+    });
+    fireEvent.change(screen.getByLabelText("Todo description"), {
+      target: { value: "Cover the edit flow" },
+    });
+    fireEvent.change(screen.getByLabelText("Todo due date"), {
+      target: { value: "2026-06-20" },
+    });
+    fireEvent.change(screen.getByLabelText("Todo milestone"), {
+      target: { value: "milestone-1" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/todos/todo-1",
+        expect.objectContaining({
+          method: "PATCH",
+          body: JSON.stringify({
+            title: "Write better tests",
+            description: "Cover the edit flow",
+            dueDate: "2026-06-20",
+            milestoneId: "milestone-1",
+          }),
+        })
+      )
+    );
+    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
+  });
+
+  it("requires a title before saving", async () => {
+    render(<TodoItem todo={makeTodo()} />);
+    await openEditForm();
+
+    fireEvent.change(screen.getByLabelText("Todo title"), {
+      target: { value: "   " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Title is required"
+    );
+    // Only the milestones fetch fired — no PATCH.
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancel restores the read view without saving", async () => {
+    render(<TodoItem todo={makeTodo()} />);
+    await openEditForm();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.getByText("Write tests")).toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledTimes(1); // milestones fetch only
+  });
+});
