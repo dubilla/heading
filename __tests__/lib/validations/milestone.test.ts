@@ -161,3 +161,48 @@ describe("updateMilestoneSchema", () => {
     expect(result.success).toBe(true);
   });
 });
+
+describe("updateMilestoneSchema type/month combinations", () => {
+  it("accepts a full quarterly edit with no month", () => {
+    const result = updateMilestoneSchema.safeParse({
+      title: "Q2 review",
+      type: "quarterly",
+      quarter: 2,
+      month: null,
+      dueDate: "2026-06-30",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a full monthly edit with a month", () => {
+    const result = updateMilestoneSchema.safeParse({
+      type: "monthly",
+      quarter: 2,
+      month: 5,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a monthly edit without a month", () => {
+    const result = updateMilestoneSchema.safeParse({
+      type: "monthly",
+      quarter: 2,
+      month: null,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a quarterly edit that keeps a month", () => {
+    const result = updateMilestoneSchema.safeParse({
+      type: "quarterly",
+      quarter: 2,
+      month: 5,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an invalid type", () => {
+    const result = updateMilestoneSchema.safeParse({ type: "weekly" });
+    expect(result.success).toBe(false);
+  });
+});
