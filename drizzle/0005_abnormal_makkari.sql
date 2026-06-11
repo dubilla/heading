@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "check_in_day" integer DEFAULT 0 NOT NULL;

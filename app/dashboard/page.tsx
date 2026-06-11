@@ -3,6 +3,7 @@ import { Navbar } from "@/components/Navbar";
 import { getGoalsByUserId, getGoalStats } from "@/lib/db/goals";
 import { getTodosByUserId, getTodoStats } from "@/lib/db/todos";
 import { getCurrentWeekCheckIn } from "@/lib/db/check-ins";
+import { getUserById } from "@/lib/db/users";
 import { getObjectivesWithGoals, getObjectiveStats } from "@/lib/db/objectives";
 import { GoalCard } from "@/components/GoalCard";
 import { ObjectiveCard } from "@/components/ObjectiveCard";
@@ -23,6 +24,7 @@ export default async function DashboardPage() {
     currentCheckIn,
     objectivesWithGoals,
     objectiveStats,
+    user,
   ] = await Promise.all([
     getGoalsByUserId(userId),
     getGoalStats(userId),
@@ -31,6 +33,7 @@ export default async function DashboardPage() {
     getCurrentWeekCheckIn(userId),
     getObjectivesWithGoals(userId),
     getObjectiveStats(userId),
+    getUserById(userId),
   ]);
 
   // Filter standalone goals (not linked to any objective)
@@ -39,6 +42,20 @@ export default async function DashboardPage() {
   const recentObjectives = objectivesWithGoals.slice(0, 3);
   const recentTodos = todos.slice(0, 5);
   const hasCompletedCheckIn = !!currentCheckIn;
+
+  // Nudge timing follows the user's chosen check-in day: before it arrives
+  // this week, point at the day instead of pressing "Now".
+  const checkInDay = user?.checkInDay ?? 0;
+  const checkInDue = new Date().getDay() >= checkInDay;
+  const dayNames = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
 
   return (
     <div
@@ -290,13 +307,15 @@ export default async function DashboardPage() {
                   className="text-4xl font-bold mb-1 text-gradient-gold"
                   style={{ fontFamily: "var(--font-display)" }}
                 >
-                  Now
+                  {checkInDue ? "Now" : dayNames[checkInDay]}
                 </p>
                 <p
                   className="text-sm font-medium"
                   style={{ color: "var(--text-accent)" }}
                 >
-                  Complete your check-in
+                  {checkInDue
+                    ? "Complete your check-in"
+                    : "Your next check-in day"}
                 </p>
               </>
             )}

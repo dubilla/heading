@@ -62,6 +62,9 @@ export const users = pgTable("users", {
   emailVerified: timestamp("email_verified", { mode: "date" }),
   image: text("image"),
   password: text("password"),
+  // 0 = Sunday … 6 = Saturday. Drives the weekly check-in nudge (dashboard
+  // label today, reminder delivery later).
+  checkInDay: integer("check_in_day").default(0).notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });

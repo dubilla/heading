@@ -36,6 +36,13 @@
       "when": 1781138603220,
       "tag": "0004_chunky_proemial_gods",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781142456898,
+      "tag": "0005_abnormal_makkari",
+      "breakpoints": true
     }
   ]
 }
