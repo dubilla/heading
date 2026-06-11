@@ -254,6 +254,24 @@ export const checkIns = pgTable(
   ]
 );
 
+// Fixed-window rate limiting (signup per IP, failed sign-ins per email).
+// Postgres-backed so it works across serverless instances without an external
+// store; rows are short-lived and cleaned opportunistically on write.
+export const rateLimitEvents = pgTable(
+  "rate_limit_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    bucket: text("bucket").notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("rate_limit_events_bucket_created_idx").on(
+      table.bucket,
+      table.createdAt.desc()
+    ),
+  ]
+);
+
 // Types
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;

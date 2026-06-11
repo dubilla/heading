@@ -7,6 +7,12 @@ import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import {
+  isRateLimited,
+  recordRateLimitEvent,
+  AUTH_RATE_LIMIT,
+  AUTH_RATE_WINDOW_MS,
+} from "@/lib/rate-limit";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -47,16 +53,25 @@ export const {
 
         const { email, password } = parsed.data;
 
+        // Throttle by failed attempts per account, so a brute-forcer can't
+        // hammer one email while real users elsewhere stay unaffected.
+        const bucket = `signin:${email.toLowerCase()}`;
+        if (await isRateLimited(bucket, AUTH_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
+          return null;
+        }
+
         const user = await db.query.users.findFirst({
           where: eq(users.email, email),
         });
 
         if (!user || !user.password) {
+          await recordRateLimitEvent(bucket, AUTH_RATE_WINDOW_MS);
           return null;
         }
 
         const passwordMatch = await bcrypt.compare(password, user.password);
         if (!passwordMatch) {
+          await recordRateLimitEvent(bucket, AUTH_RATE_WINDOW_MS);
           return null;
         }
 

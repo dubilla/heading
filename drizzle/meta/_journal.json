@@ -43,6 +43,13 @@
       "when": 1781142456898,
       "tag": "0005_abnormal_makkari",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1781148615557,
+      "tag": "0006_harden_auth_rate_limit",
+      "breakpoints": true
     }
   ]
 }
