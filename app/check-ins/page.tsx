@@ -1,8 +1,14 @@
 import { auth } from "@/lib/auth";
 import { getRecentCheckIns, getCurrentWeekCheckIn } from "@/lib/db/check-ins";
+import { getGoalsNeedingUpdate } from "@/lib/db/goals";
 import { Navbar } from "@/components/Navbar";
 import { CheckInForm } from "@/components/CheckInForm";
-import { formatWeekRange, isCurrentWeek } from "@/lib/utils/week-helpers";
+import { StaleGoalUpdates } from "@/components/StaleGoalUpdates";
+import {
+  formatWeekRange,
+  isCurrentWeek,
+  getWeekStartDate,
+} from "@/lib/utils/week-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -10,9 +16,10 @@ export default async function CheckInsPage() {
   const session = await auth();
   const userId = session!.user!.id!;
 
-  const [checkIns, currentCheckIn] = await Promise.all([
+  const [checkIns, currentCheckIn, staleGoals] = await Promise.all([
     getRecentCheckIns(userId, 20),
     getCurrentWeekCheckIn(userId),
+    getGoalsNeedingUpdate(userId, getWeekStartDate()),
   ]);
 
   const showForm = !currentCheckIn;
@@ -38,6 +45,43 @@ export default async function CheckInsPage() {
             Reflect on your progress and plan for the week ahead
           </p>
         </div>
+
+        {staleGoals.length > 0 && (
+          <div
+            className="glass p-8 rounded-2xl mb-8 animate-fade-in-up"
+            style={{
+              boxShadow: "var(--shadow-premium)",
+              border: "1px solid var(--border-primary)",
+              animationDelay: "0.05s",
+            }}
+          >
+            <h2
+              className="text-2xl font-bold mb-1"
+              style={{
+                fontFamily: "var(--font-display)",
+                color: "var(--text-primary)",
+              }}
+            >
+              Update Your Goals
+            </h2>
+            <p className="mb-6" style={{ color: "var(--text-secondary)" }}>
+              These goals haven&apos;t had a progress update this week. Record
+              where they stand.
+            </p>
+            <StaleGoalUpdates
+              goals={staleGoals.map((goal) => ({
+                id: goal.id,
+                title: goal.title,
+                unit: goal.unit,
+                startValue: goal.startValue,
+                targetValue: goal.targetValue,
+                latestValue: goal.latestProgressUpdate?.value ?? null,
+                lastUpdatedAt:
+                  goal.latestProgressUpdate?.occurredAt.toISOString() ?? null,
+              }))}
+            />
+          </div>
+        )}
 
         {showForm ? (
           <div
