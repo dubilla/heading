@@ -7,6 +7,7 @@ import {
   Goal,
 } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
+import { deriveObjectiveStatus } from "@/lib/utils/objective-status";
 
 export async function getObjectivesByUserId(
   userId: string
@@ -38,7 +39,10 @@ export async function getObjectiveWithGoals(
     orderBy: [desc(goals.createdAt)],
   });
 
-  return { objective, goals: objectiveGoals };
+  return {
+    objective: withDerivedStatus(objective, objectiveGoals),
+    goals: objectiveGoals,
+  };
 }
 
 export async function getObjectivesWithGoals(
@@ -55,11 +59,29 @@ export async function getObjectivesWithGoals(
         ),
         orderBy: [desc(goals.createdAt)],
       });
-      return { objective, goals: objectiveGoals };
+      return {
+        objective: withDerivedStatus(objective, objectiveGoals),
+        goals: objectiveGoals,
+      };
     })
   );
 
   return results;
+}
+
+/**
+ * The stored status column is vestigial (nothing ever wrote to it after
+ * creation); every read path that has the goals available reports the derived
+ * status instead.
+ */
+function withDerivedStatus(
+  objective: Objective,
+  objectiveGoals: Goal[]
+): Objective {
+  return {
+    ...objective,
+    status: deriveObjectiveStatus(objectiveGoals.map((g) => g.status)),
+  };
 }
 
 export async function createObjective(
@@ -94,17 +116,15 @@ export async function deleteObjective(
 }
 
 export async function getObjectiveStats(userId: string) {
-  const userObjectives = await getObjectivesByUserId(userId);
-  const total = userObjectives.length;
-  const completed = userObjectives.filter(
-    (o) => o.status === "completed"
+  const withGoals = await getObjectivesWithGoals(userId);
+  const statuses = withGoals.map(({ objective }) => objective.status);
+
+  const total = statuses.length;
+  const completed = statuses.filter((s) => s === "completed").length;
+  const inProgress = statuses.filter(
+    (s) => s === "in_progress" || s === "on_track"
   ).length;
-  const inProgress = userObjectives.filter(
-    (o) => o.status === "in_progress" || o.status === "on_track"
-  ).length;
-  const offTrack = userObjectives.filter(
-    (o) => o.status === "off_track"
-  ).length;
+  const offTrack = statuses.filter((s) => s === "off_track").length;
 
   return { total, completed, inProgress, offTrack };
 }
