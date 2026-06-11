@@ -37,6 +37,12 @@ export async function POST(request: NextRequest) {
     if (result.reason === "goal_not_found") {
       return NextResponse.json({ error: "Goal not found" }, { status: 404 });
     }
+    if (result.reason === "milestone_not_found") {
+      return NextResponse.json(
+        { error: "Milestone not found" },
+        { status: 404 }
+      );
+    }
     if (result.reason === "conflict") {
       return NextResponse.json(
         { error: "That Crew task is already linked somewhere else." },

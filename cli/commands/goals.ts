@@ -125,6 +125,10 @@ goalsCommand
       unit: opts.unit,
       status: "not_started",
     });
+    if (!goal) {
+      console.error("Objective not found.");
+      process.exit(1);
+    }
     console.log(`Created goal: ${goal.id}`);
     console.log(`Title: ${goal.title}`);
   });
@@ -167,7 +171,7 @@ goalsCommand
 
     const goal = await updateGoal(id, userId, data);
     if (!goal) {
-      console.error("Goal not found.");
+      console.error("Goal or objective not found.");
       process.exit(1);
     }
 

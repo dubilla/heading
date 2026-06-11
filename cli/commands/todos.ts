@@ -8,8 +8,7 @@ import {
 } from "@/lib/db/todos";
 import { getUserId, formatDate, printTable } from "../utils";
 
-export const todosCommand = new Command("todos")
-  .description("Manage todos");
+export const todosCommand = new Command("todos").description("Manage todos");
 
 todosCommand
   .command("list")
@@ -91,7 +90,9 @@ todosCommand
     );
 
     if (!todo) {
-      console.error("Failed to create todo. Check that the goal exists.");
+      console.error(
+        "Failed to create todo. Check that the goal and milestone exist."
+      );
       process.exit(1);
     }
 

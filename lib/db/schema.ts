@@ -11,6 +11,7 @@ import {
   json,
   primaryKey,
   index,
+  unique,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 
@@ -225,18 +226,30 @@ export const planningSessions = pgTable("planning_sessions", {
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 
-export const checkIns = pgTable("check_ins", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  weekStartDate: date("week_start_date", { mode: "date" }).notNull(),
-  accomplishments: text("accomplishments").notNull(),
-  challenges: text("challenges").notNull(),
-  nextWeekPriorities: text("next_week_priorities").notNull(),
-  needsAdjustment: boolean("needs_adjustment").default(false).notNull(),
-  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-});
+export const checkIns = pgTable(
+  "check_ins",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    weekStartDate: date("week_start_date", { mode: "date" }).notNull(),
+    accomplishments: text("accomplishments").notNull(),
+    challenges: text("challenges").notNull(),
+    nextWeekPriorities: text("next_week_priorities").notNull(),
+    needsAdjustment: boolean("needs_adjustment").default(false).notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => [
+    // One check-in per user per week, enforced at the DB level — the API's
+    // existence check alone can't survive concurrent submissions.
+    unique("check_ins_user_id_week_start_date_uq").on(
+      table.userId,
+      table.weekStartDate
+    ),
+  ]
+);
 
 // Types
 export type User = typeof users.$inferSelect;
