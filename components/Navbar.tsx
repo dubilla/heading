@@ -28,6 +28,7 @@ export function Navbar({ userName }: NavbarProps) {
     { href: "/goals", label: "Goals" },
     { href: "/todos", label: "Todos" },
     { href: "/check-ins", label: "Check-ins" },
+    { href: "/settings", label: "Settings", mobileOnly: true },
   ];
 
   const isLinkActive = (href: string) =>
@@ -78,34 +79,40 @@ export function Navbar({ userName }: NavbarProps) {
               </span>
             </Link>
             <div className="hidden sm:ml-10 sm:flex sm:space-x-1">
-              {navLinks.map((link) => {
-                const isActive = isLinkActive(link.href);
+              {navLinks
+                .filter((link) => !link.mobileOnly)
+                .map((link) => {
+                  const isActive = isLinkActive(link.href);
 
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="cursor-pointer relative inline-flex items-center px-4 py-2 text-sm font-semibold transition-all rounded-lg"
-                    style={{
-                      color: isActive
-                        ? "var(--text-accent)"
-                        : "var(--text-secondary)",
-                      background: isActive
-                        ? "rgba(251, 191, 36, 0.1)"
-                        : "transparent",
-                    }}
-                  >
-                    {link.label}
-                    {isActive && (
-                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-gradient-gold rounded-full"></div>
-                    )}
-                  </Link>
-                );
-              })}
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className="cursor-pointer relative inline-flex items-center px-4 py-2 text-sm font-semibold transition-all rounded-lg"
+                      style={{
+                        color: isActive
+                          ? "var(--text-accent)"
+                          : "var(--text-secondary)",
+                        background: isActive
+                          ? "rgba(251, 191, 36, 0.1)"
+                          : "transparent",
+                      }}
+                    >
+                      {link.label}
+                      {isActive && (
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-gradient-gold rounded-full"></div>
+                      )}
+                    </Link>
+                  );
+                })}
             </div>
           </div>
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3">
+            <Link
+              href="/settings"
+              aria-label="Settings"
+              className="cursor-pointer flex items-center gap-3 rounded-lg px-2 py-1 transition-all hover:bg-white/5"
+            >
               <div
                 className="w-8 h-8 rounded-full bg-gradient-gold flex items-center justify-center font-bold text-sm"
                 style={{ color: "var(--background-primary)" }}
@@ -118,7 +125,7 @@ export function Navbar({ userName }: NavbarProps) {
               >
                 {userName || "User"}
               </span>
-            </div>
+            </Link>
             <button
               onClick={() => signOut({ callbackUrl: "/" })}
               className="cursor-pointer text-sm font-medium px-4 py-2 rounded-lg transition-all hover:bg-white/5"

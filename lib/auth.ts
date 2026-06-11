@@ -13,7 +13,13 @@ const credentialsSchema = z.object({
   password: z.string().min(8),
 });
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const {
+  handlers,
+  auth,
+  signIn,
+  signOut,
+  unstable_update: updateSession,
+} = NextAuth({
   adapter: DrizzleAdapter(db),
   session: {
     strategy: "jwt",
@@ -64,9 +70,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
+      }
+      // Fired by updateSession() (e.g. after a profile edit) so the navbar
+      // reflects the new name without a re-login.
+      if (trigger === "update" && session?.user?.name) {
+        token.name = session.user.name;
       }
       return token;
     },
