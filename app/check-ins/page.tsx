@@ -1,9 +1,12 @@
 import { auth } from "@/lib/auth";
 import { getRecentCheckIns, getCurrentWeekCheckIn } from "@/lib/db/check-ins";
-import { getGoalsNeedingUpdate } from "@/lib/db/goals";
+import { getGoalsNeedingUpdate, getGoalsByUserId } from "@/lib/db/goals";
+import { getTodosByUserId } from "@/lib/db/todos";
 import { Navbar } from "@/components/Navbar";
 import { CheckInForm } from "@/components/CheckInForm";
 import { StaleGoalUpdates } from "@/components/StaleGoalUpdates";
+import { WeekPlanner } from "@/components/WeekPlanner";
+import { groupTodosForWeekPlanning } from "@/lib/utils/week-planning";
 import {
   formatWeekRange,
   isCurrentWeek,
@@ -16,11 +19,19 @@ export default async function CheckInsPage() {
   const session = await auth();
   const userId = session!.user!.id!;
 
-  const [checkIns, currentCheckIn, staleGoals] = await Promise.all([
-    getRecentCheckIns(userId, 20),
-    getCurrentWeekCheckIn(userId),
-    getGoalsNeedingUpdate(userId, getWeekStartDate()),
-  ]);
+  const [checkIns, currentCheckIn, staleGoals, todos, goals] =
+    await Promise.all([
+      getRecentCheckIns(userId, 20),
+      getCurrentWeekCheckIn(userId),
+      getGoalsNeedingUpdate(userId, getWeekStartDate()),
+      getTodosByUserId(userId),
+      getGoalsByUserId(userId),
+    ]);
+
+  const planGroups = groupTodosForWeekPlanning(todos);
+  const activeGoals = goals
+    .filter((goal) => goal.status !== "completed")
+    .map((goal) => ({ id: goal.id, title: goal.title }));
 
   const showForm = !currentCheckIn;
 
@@ -142,6 +153,38 @@ export default async function CheckInsPage() {
             </div>
           </div>
         )}
+
+        <div
+          className="glass p-8 rounded-2xl mb-8 animate-fade-in-up"
+          style={{
+            boxShadow: "var(--shadow-premium)",
+            border: "1px solid var(--border-primary)",
+            animationDelay: "0.15s",
+          }}
+        >
+          <h2
+            className="text-2xl font-bold mb-1"
+            style={{
+              fontFamily: "var(--font-display)",
+              color: "var(--text-primary)",
+            }}
+          >
+            Plan Your Week
+          </h2>
+          <p className="mb-6" style={{ color: "var(--text-secondary)" }}>
+            {planGroups.thisWeek.length > 0
+              ? `${planGroups.thisWeek.length} todo${
+                  planGroups.thisWeek.length === 1 ? "" : "s"
+                } planned for this week so far.`
+              : "Pull todos into the week or add new ones."}
+          </p>
+          <WeekPlanner
+            overdue={planGroups.overdue}
+            thisWeek={planGroups.thisWeek}
+            undated={planGroups.undated}
+            goals={activeGoals}
+          />
+        </div>
 
         <div
           className="glass p-8 rounded-2xl animate-fade-in-up"
