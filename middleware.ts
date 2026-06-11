@@ -24,8 +24,26 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  // Allow API requests with admin API key
-  if (isApiRoute && process.env.ADMIN_API_KEY) {
+  // Allow API requests with admin API key, but only on the data API surface —
+  // never account management (settings, password) or auth endpoints, so a
+  // leaked key can't take over the account it impersonates. The handler
+  // re-verifies the key (constant-time) in getAuthUserId.
+  const adminKeyAllowedPrefixes = [
+    "/api/goals",
+    "/api/objectives",
+    "/api/todos",
+    "/api/milestones",
+    "/api/check-ins",
+    "/api/plan",
+    "/api/crew",
+  ];
+  if (
+    isApiRoute &&
+    process.env.ADMIN_API_KEY &&
+    adminKeyAllowedPrefixes.some((prefix) =>
+      req.nextUrl.pathname.startsWith(prefix)
+    )
+  ) {
     const authHeader = req.headers.get("authorization");
     if (authHeader?.replace("Bearer ", "") === process.env.ADMIN_API_KEY) {
       return NextResponse.next();

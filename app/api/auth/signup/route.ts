@@ -4,9 +4,26 @@ import { users } from "@/lib/db/schema";
 import { signUpSchema } from "@/lib/validations/auth";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import {
+  isRateLimited,
+  recordRateLimitEvent,
+  clientIpFrom,
+  AUTH_RATE_LIMIT,
+  AUTH_RATE_WINDOW_MS,
+} from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = clientIpFrom(request.headers.get("x-forwarded-for"));
+    const bucket = `signup:${ip}`;
+    if (await isRateLimited(bucket, AUTH_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
+      return NextResponse.json(
+        { error: "Too many signup attempts. Try again in a few minutes." },
+        { status: 429 }
+      );
+    }
+    await recordRateLimitEvent(bucket, AUTH_RATE_WINDOW_MS);
+
     const body = await request.json();
     const parsed = signUpSchema.safeParse(body);
 
