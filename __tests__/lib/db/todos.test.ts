@@ -1,6 +1,6 @@
 import { createTodo, updateTodo, linkExistingCrewTask } from "@/lib/db/todos";
 import { db } from "@/lib/db";
-import { linkCrewTask } from "@/lib/integrations/crew";
+import { linkCrewTask, updateCrewTask } from "@/lib/integrations/crew";
 
 jest.mock("@/lib/db", () => ({
   db: {
@@ -23,6 +23,7 @@ jest.mock("@/lib/integrations/crew", () => ({
   createCrewTask: jest.fn(async () => null),
   completeCrewTask: jest.fn(async () => undefined),
   linkCrewTask: jest.fn(async () => "ok"),
+  updateCrewTask: jest.fn(async () => undefined),
 }));
 
 const mockDb = db as unknown as {
@@ -145,6 +146,40 @@ describe("updateTodo", () => {
     const result = await updateTodo(todoId, userId, { milestoneId });
 
     expect(result).toEqual(updatedRow);
+  });
+
+  it("propagates content edits to the linked Crew task", async () => {
+    const crewLinked = { ...existingTodo, crewTaskId: "crew-task-1" };
+    mockDb.query.todos.findFirst.mockResolvedValue(crewLinked);
+    const updatedRow = { ...crewLinked, title: "Sharper title" };
+    mockUpdateReturning(updatedRow);
+
+    await updateTodo(todoId, userId, { title: "Sharper title" });
+
+    expect(updateCrewTask).toHaveBeenCalledWith("crew-task-1", {
+      title: "Sharper title",
+      description: undefined,
+      dueDate: undefined,
+    });
+  });
+
+  it("does not touch Crew content on a completion-only toggle", async () => {
+    const crewLinked = { ...existingTodo, crewTaskId: "crew-task-1" };
+    mockDb.query.todos.findFirst.mockResolvedValue(crewLinked);
+    mockUpdateReturning({ ...crewLinked, completed: true });
+
+    await updateTodo(todoId, userId, { completed: true });
+
+    expect(updateCrewTask).not.toHaveBeenCalled();
+  });
+
+  it("skips Crew propagation for unlinked todos", async () => {
+    mockDb.query.todos.findFirst.mockResolvedValue(existingTodo);
+    mockUpdateReturning({ ...existingTodo, title: "New" });
+
+    await updateTodo(todoId, userId, { title: "New" });
+
+    expect(updateCrewTask).not.toHaveBeenCalled();
   });
 });
 
