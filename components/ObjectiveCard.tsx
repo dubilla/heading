@@ -31,10 +31,10 @@ export function ObjectiveCard({
         <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-[60px] opacity-0 group-hover:opacity-20 transition-opacity bg-gradient-gold"></div>
 
         <div className="relative">
-          <div className="flex items-start justify-between mb-4">
+          <div className="flex items-start justify-between gap-3 mb-4">
             <div className="flex-1 min-w-0">
               <h3
-                className="text-xl font-bold mb-2 truncate"
+                className="text-xl font-bold mb-2 break-words"
                 style={{
                   fontFamily: "var(--font-display)",
                   color: "var(--text-primary)",
@@ -44,14 +44,16 @@ export function ObjectiveCard({
               </h3>
               {objective.description && (
                 <p
-                  className="text-sm line-clamp-2"
+                  className="text-sm line-clamp-2 break-words"
                   style={{ color: "var(--text-secondary)" }}
                 >
                   {objective.description}
                 </p>
               )}
             </div>
-            <StatusBadge status={objective.status} />
+            <div className="shrink-0">
+              <StatusBadge status={objective.status} />
+            </div>
           </div>
 
           {showGoalCount && (
