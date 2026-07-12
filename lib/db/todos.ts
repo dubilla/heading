@@ -204,7 +204,13 @@ export async function createTodo(
  * later write.
  */
 export async function linkTodoToCrew(todo: Todo): Promise<Todo> {
-  const crewTaskId = await createCrewTask(todo);
+  const goal = await db.query.goals.findFirst({
+    where: eq(goals.id, todo.goalId),
+  });
+  const crewTaskId = await createCrewTask(
+    todo,
+    goal ? { id: goal.id, title: goal.title } : undefined
+  );
   if (!crewTaskId) return todo;
 
   const [updated] = await db
@@ -268,7 +274,10 @@ export async function linkExistingCrewTask(
     })
     .returning();
 
-  const result = await linkCrewTask(data.crewTaskId, todo.id);
+  const result = await linkCrewTask(data.crewTaskId, todo.id, {
+    id: goal.id,
+    title: goal.title,
+  });
   if (result !== "ok") {
     // Roll back the dead local row so the user can retry cleanly.
     await db.delete(todos).where(eq(todos.id, todo.id));
