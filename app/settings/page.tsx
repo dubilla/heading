@@ -1,11 +1,13 @@
 import { auth } from "@/lib/auth";
 import { getUserById } from "@/lib/db/users";
+import { listTokensByUserId } from "@/lib/db/tokens";
 import { Navbar } from "@/components/Navbar";
 import {
   ProfileForm,
   CheckInDayForm,
   PasswordForm,
 } from "@/components/SettingsForms";
+import { TokensManager } from "@/components/TokensManager";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,7 @@ export default async function SettingsPage() {
   const session = await auth();
   const userId = session!.user!.id!;
   const user = await getUserById(userId);
+  const tokens = await listTokensByUserId(userId);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -43,6 +46,13 @@ export default async function SettingsPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Password</h2>
           <PasswordForm hasPassword={!!user?.password} />
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Personal Access Tokens
+          </h2>
+          <TokensManager initialTokens={tokens} />
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
