@@ -225,14 +225,7 @@ export const todos = pgTable("todos", {
   dueDate: date("due_date", { mode: "date" }),
   completed: boolean("completed").default(false).notNull(),
   completedAt: timestamp("completed_at", { mode: "date" }),
-  // Crew is the system-of-record for task content/execution; we keep a thin
-  // local row and cache the linked Crew task id here. Null when the todo
-  // hasn't been pushed to Crew (integration off, or push failed — graceful
-  // degradation, retried on next write).
   crewTaskId: text("crew_task_id"),
-  // "heading" = created here and pushed to Crew; "crew" = an existing Crew task
-  // linked into this goal (S2). Drives whether we created the Crew task or
-  // adopted it.
   origin: todoOriginEnum("origin").default("heading").notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
