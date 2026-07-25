@@ -113,11 +113,6 @@ export const verificationTokens = pgTable(
   ]
 );
 
-// Personal access tokens: per-user, revocable API credentials for CLI and
-// other machine clients. The plaintext token is shown to the user exactly once
-// at creation; we persist only a SHA-256 hash. The token is 256 bits of
-// randomness, so a fast hash is safe (and lets us look it up directly by
-// hash). Supersedes the single shared ADMIN_API_KEY for multi-user use.
 export const personalAccessTokens = pgTable(
   "personal_access_tokens",
   {
