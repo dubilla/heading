@@ -3,12 +3,9 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { personalAccessTokens, PersonalAccessToken } from "@/lib/db/schema";
 
-// All Heading tokens carry this prefix so secret-scanners can spot leaks and
-// getAuthUserId can cheaply distinguish a PAT from the legacy admin key.
+// All Heading tokens carry this prefix so secret-scanners can spot leaks
 export const TOKEN_PREFIX = "hd_";
 
-// Only refresh lastUsedAt once an hour, so a busy client doesn't cause a write
-// on every request.
 const LAST_USED_THROTTLE_MS = 60 * 60 * 1000;
 
 export function hashToken(token: string): string {
@@ -43,7 +40,7 @@ export async function createToken(params: {
       expiresAt: params.expiresAt,
     })
     .returning();
-  // Map to the summary shape so the hash never leaves this layer.
+
   const summary: TokenSummary = {
     id: record.id,
     userId: record.userId,
