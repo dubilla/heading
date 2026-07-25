@@ -113,6 +113,32 @@ export const verificationTokens = pgTable(
   ]
 );
 
+// Personal access tokens: per-user, revocable API credentials for CLI and
+// other machine clients. The plaintext token is shown to the user exactly once
+// at creation; we persist only a SHA-256 hash. The token is 256 bits of
+// randomness, so a fast hash is safe (and lets us look it up directly by
+// hash). Supersedes the single shared ADMIN_API_KEY for multi-user use.
+export const personalAccessTokens = pgTable(
+  "personal_access_tokens",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    // Last 4 chars of the plaintext, so a token is identifiable in the UI
+    // without ever exposing anything usable.
+    last4: text("last4").notNull(),
+    // Null means no expiry; the UI requires a choice, so app-created tokens
+    // always set one.
+    expiresAt: timestamp("expires_at", { mode: "date" }),
+    lastUsedAt: timestamp("last_used_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => [index("personal_access_tokens_user_id_idx").on(table.userId)]
+);
+
 // Application tables
 export const objectives = pgTable("objectives", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -289,3 +315,5 @@ export type ProgressUpdate = typeof progressUpdates.$inferSelect;
 export type NewProgressUpdate = typeof progressUpdates.$inferInsert;
 export type CheckIn = typeof checkIns.$inferSelect;
 export type NewCheckIn = typeof checkIns.$inferInsert;
+export type PersonalAccessToken = typeof personalAccessTokens.$inferSelect;
+export type NewPersonalAccessToken = typeof personalAccessTokens.$inferInsert;

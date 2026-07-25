@@ -24,11 +24,13 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  // Allow API requests with admin API key, but only on the data API surface —
-  // never account management (settings, password) or auth endpoints, so a
-  // leaked key can't take over the account it impersonates. The handler
-  // re-verifies the key (constant-time) in getAuthUserId.
-  const adminKeyAllowedPrefixes = [
+  // Allow token-authenticated requests (per-user personal access tokens and
+  // the legacy admin API key) through to the handler, but only on the data API
+  // surface — never account management (settings, password) or auth endpoints,
+  // so a leaked token can't take over the account or mint more tokens. The
+  // handler is the security gate: getAuthUserId verifies the token and returns
+  // 401 if it's invalid, expired, or revoked.
+  const tokenAuthAllowedPrefixes = [
     "/api/goals",
     "/api/objectives",
     "/api/todos",
@@ -39,15 +41,12 @@ export default auth((req) => {
   ];
   if (
     isApiRoute &&
-    process.env.ADMIN_API_KEY &&
-    adminKeyAllowedPrefixes.some((prefix) =>
+    req.headers.get("authorization") &&
+    tokenAuthAllowedPrefixes.some((prefix) =>
       req.nextUrl.pathname.startsWith(prefix)
     )
   ) {
-    const authHeader = req.headers.get("authorization");
-    if (authHeader?.replace("Bearer ", "") === process.env.ADMIN_API_KEY) {
-      return NextResponse.next();
-    }
+    return NextResponse.next();
   }
 
   // Redirect authenticated users away from auth pages
