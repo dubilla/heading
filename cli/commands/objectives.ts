@@ -1,12 +1,7 @@
 import { Command } from "commander";
-import {
-  getObjectivesByUserId,
-  getObjectiveWithGoals,
-  createObjective,
-  updateObjective,
-  deleteObjective,
-} from "@/lib/db/objectives";
-import { getUserId, formatDate, formatStatus, printTable } from "../utils";
+import type { Objective, Goal } from "@/lib/db/schema";
+import { apiGet, apiPost, apiPatch, apiDelete } from "../api";
+import { formatDate, formatStatus, printTable } from "../utils";
 
 export const objectivesCommand = new Command("objectives")
   .alias("obj")
@@ -15,9 +10,8 @@ export const objectivesCommand = new Command("objectives")
 objectivesCommand
   .command("list")
   .description("List all objectives")
-  .action(async function (this: Command) {
-    const userId = getUserId(this);
-    const objs = await getObjectivesByUserId(userId);
+  .action(async () => {
+    const objs = await apiGet<Objective[]>("/api/objectives");
 
     if (objs.length === 0) {
       console.log("No objectives found.");
@@ -38,16 +32,12 @@ objectivesCommand
 objectivesCommand
   .command("get <id>")
   .description("Get an objective with its goals")
-  .action(async function (this: Command, id: string) {
-    const userId = getUserId(this);
-    const result = await getObjectiveWithGoals(id, userId);
+  .action(async (id: string) => {
+    const { objective, goals } = await apiGet<{
+      objective: Objective;
+      goals: Goal[];
+    }>(`/api/objectives/${id}?includeGoals=true`);
 
-    if (!result) {
-      console.error("Objective not found.");
-      process.exit(1);
-    }
-
-    const { objective, goals } = result;
     console.log(`Title:       ${objective.title}`);
     console.log(`ID:          ${objective.id}`);
     console.log(`Status:      ${formatStatus(objective.status)}`);
@@ -77,13 +67,10 @@ objectivesCommand
   .requiredOption("-t, --title <title>", "Objective title")
   .option("-d, --description <description>", "Objective description")
   .action(async function (this: Command) {
-    const userId = getUserId(this);
     const opts = this.opts();
-    const objective = await createObjective({
-      userId,
+    const objective = await apiPost<Objective>("/api/objectives", {
       title: opts.title,
       description: opts.description ?? null,
-      status: "not_started",
     });
     console.log(`Created objective: ${objective.id}`);
     console.log(`Title: ${objective.title}`);
@@ -99,7 +86,6 @@ objectivesCommand
     "New status (not_started, in_progress, on_track, off_track, completed)"
   )
   .action(async function (this: Command, id: string) {
-    const userId = getUserId(this);
     const opts = this.opts();
     const data: Record<string, string> = {};
     if (opts.title) data.title = opts.title;
@@ -107,16 +93,13 @@ objectivesCommand
     if (opts.status) data.status = opts.status;
 
     if (Object.keys(data).length === 0) {
-      console.error("No fields to update. Use --title, --description, or --status.");
+      console.error(
+        "No fields to update. Use --title, --description, or --status."
+      );
       process.exit(1);
     }
 
-    const objective = await updateObjective(id, userId, data);
-    if (!objective) {
-      console.error("Objective not found.");
-      process.exit(1);
-    }
-
+    const objective = await apiPatch<Objective>(`/api/objectives/${id}`, data);
     console.log(`Updated objective: ${objective.id}`);
     console.log(`Title:  ${objective.title}`);
     console.log(`Status: ${formatStatus(objective.status)}`);
@@ -125,12 +108,7 @@ objectivesCommand
 objectivesCommand
   .command("delete <id>")
   .description("Delete an objective")
-  .action(async function (this: Command, id: string) {
-    const userId = getUserId(this);
-    const deleted = await deleteObjective(id, userId);
-    if (!deleted) {
-      console.error("Objective not found.");
-      process.exit(1);
-    }
+  .action(async (id: string) => {
+    await apiDelete(`/api/objectives/${id}`);
     console.log("Objective deleted.");
   });

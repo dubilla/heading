@@ -1,30 +1,52 @@
 import { Command } from "commander";
-import { getObjectiveStats } from "@/lib/db/objectives";
-import { getGoalStats } from "@/lib/db/goals";
-import { getTodoStats } from "@/lib/db/todos";
-import { getUserId } from "../utils";
+import { apiGet } from "../api";
+
+type DashboardStats = {
+  objectives: {
+    total: number;
+    inProgress: number;
+    completed: number;
+    offTrack: number;
+  };
+  goals: {
+    total: number;
+    inProgress: number;
+    completed: number;
+    offTrack: number;
+  };
+  todos: {
+    total: number;
+    completed: number;
+    pending: number;
+    dueThisWeek: number;
+    overdue: number;
+  };
+};
 
 export const dashboardCommand = new Command("dashboard")
   .alias("dash")
   .description("Show overview stats")
-  .action(async function (this: Command) {
-    const userId = getUserId(this);
-
-    const [objStats, goalStats, todoStats] = await Promise.all([
-      getObjectiveStats(userId),
-      getGoalStats(userId),
-      getTodoStats(userId),
-    ]);
+  .action(async () => {
+    const { objectives, goals, todos } =
+      await apiGet<DashboardStats>("/api/dashboard");
 
     console.log("=== Heading Dashboard ===\n");
 
     console.log("Objectives:");
-    console.log(`  Total: ${objStats.total}  In Progress: ${objStats.inProgress}  Completed: ${objStats.completed}  Off Track: ${objStats.offTrack}`);
+    console.log(
+      `  Total: ${objectives.total}  In Progress: ${objectives.inProgress}  Completed: ${objectives.completed}  Off Track: ${objectives.offTrack}`
+    );
 
     console.log("\nGoals:");
-    console.log(`  Total: ${goalStats.total}  In Progress: ${goalStats.inProgress}  Completed: ${goalStats.completed}  Off Track: ${goalStats.offTrack}`);
+    console.log(
+      `  Total: ${goals.total}  In Progress: ${goals.inProgress}  Completed: ${goals.completed}  Off Track: ${goals.offTrack}`
+    );
 
     console.log("\nTodos:");
-    console.log(`  Total: ${todoStats.total}  Completed: ${todoStats.completed}  Pending: ${todoStats.pending}`);
-    console.log(`  Due This Week: ${todoStats.dueThisWeek}  Overdue: ${todoStats.overdue}`);
+    console.log(
+      `  Total: ${todos.total}  Completed: ${todos.completed}  Pending: ${todos.pending}`
+    );
+    console.log(
+      `  Due This Week: ${todos.dueThisWeek}  Overdue: ${todos.overdue}`
+    );
   });

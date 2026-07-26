@@ -1,12 +1,7 @@
 import { Command } from "commander";
-import {
-  getTodosByUserId,
-  getTodoById,
-  createTodo,
-  updateTodo,
-  deleteTodo,
-} from "@/lib/db/todos";
-import { getUserId, formatDate, printTable } from "../utils";
+import type { Todo } from "@/lib/db/schema";
+import { apiGet, apiPost, apiPatch, apiDelete } from "../api";
+import { formatDate, printTable } from "../utils";
 
 export const todosCommand = new Command("todos").description("Manage todos");
 
@@ -18,13 +13,15 @@ todosCommand
   .option("--completed", "Show only completed todos")
   .option("--pending", "Show only pending todos")
   .action(async function (this: Command) {
-    const userId = getUserId(this);
     const opts = this.opts();
-    const items = await getTodosByUserId(userId, {
-      goalId: opts.goalId,
-      milestoneId: opts.milestoneId,
-      completed: opts.completed ? true : opts.pending ? false : undefined,
-    });
+    const params = new URLSearchParams();
+    if (opts.goalId) params.set("goalId", opts.goalId);
+    if (opts.milestoneId) params.set("milestoneId", opts.milestoneId);
+    if (opts.completed) params.set("completed", "true");
+    else if (opts.pending) params.set("completed", "false");
+
+    const query = params.toString();
+    const items = await apiGet<Todo[]>(`/api/todos${query ? `?${query}` : ""}`);
 
     if (items.length === 0) {
       console.log("No todos found.");
@@ -46,14 +43,8 @@ todosCommand
 todosCommand
   .command("get <id>")
   .description("Get a todo")
-  .action(async function (this: Command, id: string) {
-    const userId = getUserId(this);
-    const todo = await getTodoById(id, userId);
-
-    if (!todo) {
-      console.error("Todo not found.");
-      process.exit(1);
-    }
+  .action(async (id: string) => {
+    const todo = await apiGet<Todo>(`/api/todos/${id}`);
 
     console.log(`Title:       ${todo.title}`);
     console.log(`ID:          ${todo.id}`);
@@ -76,26 +67,14 @@ todosCommand
   .option("-m, --milestone-id <milestoneId>", "Milestone ID")
   .option("--due-date <date>", "Due date (YYYY-MM-DD)")
   .action(async function (this: Command) {
-    const userId = getUserId(this);
     const opts = this.opts();
-    const todo = await createTodo(
-      {
-        goalId: opts.goalId,
-        title: opts.title,
-        description: opts.description ?? null,
-        milestoneId: opts.milestoneId ?? null,
-        dueDate: opts.dueDate ? new Date(opts.dueDate) : null,
-      },
-      userId
-    );
-
-    if (!todo) {
-      console.error(
-        "Failed to create todo. Check that the goal and milestone exist."
-      );
-      process.exit(1);
-    }
-
+    const todo = await apiPost<Todo>("/api/todos", {
+      goalId: opts.goalId,
+      title: opts.title,
+      description: opts.description ?? null,
+      milestoneId: opts.milestoneId ?? null,
+      dueDate: opts.dueDate ?? null,
+    });
     console.log(`Created todo: ${todo.id}`);
     console.log(`Title: ${todo.title}`);
   });
@@ -103,13 +82,8 @@ todosCommand
 todosCommand
   .command("complete <id>")
   .description("Mark a todo as complete")
-  .action(async function (this: Command, id: string) {
-    const userId = getUserId(this);
-    const todo = await updateTodo(id, userId, { completed: true });
-    if (!todo) {
-      console.error("Todo not found.");
-      process.exit(1);
-    }
+  .action(async (id: string) => {
+    const todo = await apiPatch<Todo>(`/api/todos/${id}`, { completed: true });
     console.log(`Completed: ${todo.title}`);
   });
 
@@ -121,12 +95,11 @@ todosCommand
   .option("--due-date <date>", "New due date (YYYY-MM-DD)")
   .option("--completed <bool>", "Set completed (true/false)")
   .action(async function (this: Command, id: string) {
-    const userId = getUserId(this);
     const opts = this.opts();
     const data: Record<string, unknown> = {};
     if (opts.title) data.title = opts.title;
     if (opts.description) data.description = opts.description;
-    if (opts.dueDate) data.dueDate = new Date(opts.dueDate);
+    if (opts.dueDate) data.dueDate = opts.dueDate;
     if (opts.completed !== undefined)
       data.completed = opts.completed === "true";
 
@@ -135,12 +108,7 @@ todosCommand
       process.exit(1);
     }
 
-    const todo = await updateTodo(id, userId, data);
-    if (!todo) {
-      console.error("Todo not found.");
-      process.exit(1);
-    }
-
+    const todo = await apiPatch<Todo>(`/api/todos/${id}`, data);
     console.log(`Updated todo: ${todo.id}`);
     console.log(`Title: ${todo.title}`);
   });
@@ -148,12 +116,7 @@ todosCommand
 todosCommand
   .command("delete <id>")
   .description("Delete a todo")
-  .action(async function (this: Command, id: string) {
-    const userId = getUserId(this);
-    const deleted = await deleteTodo(id, userId);
-    if (!deleted) {
-      console.error("Todo not found.");
-      process.exit(1);
-    }
+  .action(async (id: string) => {
+    await apiDelete(`/api/todos/${id}`);
     console.log("Todo deleted.");
   });
