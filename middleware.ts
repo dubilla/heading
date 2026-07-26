@@ -38,6 +38,7 @@ export default auth((req) => {
     "/api/check-ins",
     "/api/plan",
     "/api/crew",
+    "/api/dashboard",
   ];
   if (
     isApiRoute &&

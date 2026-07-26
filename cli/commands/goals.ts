@@ -1,21 +1,8 @@
 import { Command } from "commander";
-import {
-  getGoalsByUserId,
-  getGoalById,
-  createGoal,
-  updateGoal,
-  deleteGoal,
-} from "@/lib/db/goals";
-import { getMilestonesByGoalId } from "@/lib/db/milestones";
-import { getTodosByGoalId } from "@/lib/db/todos";
-import {
-  createProgressUpdate,
-  deleteProgressUpdate,
-  getProgressUpdatesByGoalId,
-  updateProgressUpdate,
-} from "@/lib/db/progress-updates";
+import type { Goal, Milestone, Todo, ProgressUpdate } from "@/lib/db/schema";
 import { calculateValueProgress } from "@/lib/utils/progress";
-import { getUserId, formatDate, formatStatus, printTable } from "../utils";
+import { apiGet, apiPost, apiPatch, apiDelete } from "../api";
+import { formatDate, formatStatus, printTable } from "../utils";
 
 export const goalsCommand = new Command("goals").description("Manage goals");
 
@@ -24,9 +11,8 @@ goalsCommand
   .description("List all goals")
   .option("-o, --objective-id <objectiveId>", "Filter by objective ID")
   .action(async function (this: Command) {
-    const userId = getUserId(this);
     const opts = this.opts();
-    let userGoals = await getGoalsByUserId(userId);
+    let userGoals = await apiGet<Goal[]>("/api/goals");
 
     if (opts.objectiveId) {
       userGoals = userGoals.filter((g) => g.objectiveId === opts.objectiveId);
@@ -52,14 +38,8 @@ goalsCommand
 goalsCommand
   .command("get <id>")
   .description("Get a goal with milestones and todos")
-  .action(async function (this: Command, id: string) {
-    const userId = getUserId(this);
-    const goal = await getGoalById(id, userId);
-
-    if (!goal) {
-      console.error("Goal not found.");
-      process.exit(1);
-    }
+  .action(async (id: string) => {
+    const goal = await apiGet<Goal>(`/api/goals/${id}`);
 
     console.log(`Title:       ${goal.title}`);
     console.log(`ID:          ${goal.id}`);
@@ -69,7 +49,9 @@ goalsCommand
     console.log(`Category:    ${goal.category || "—"}`);
     console.log(`Objective:   ${goal.objectiveId || "—"}`);
 
-    const goalMilestones = await getMilestonesByGoalId(id, userId);
+    const goalMilestones = await apiGet<Milestone[]>(
+      `/api/goals/${id}/milestones`
+    );
     if (goalMilestones.length > 0) {
       console.log(`\nMilestones (${goalMilestones.length}):`);
       printTable(
@@ -84,7 +66,7 @@ goalsCommand
       );
     }
 
-    const goalTodos = await getTodosByGoalId(id, userId);
+    const goalTodos = await apiGet<Todo[]>(`/api/todos?goalId=${id}`);
     if (goalTodos.length > 0) {
       console.log(`\nTodos (${goalTodos.length}):`);
       printTable(
@@ -111,24 +93,17 @@ goalsCommand
   .option("--target-value <n>", "Target value for progress tracking", "100")
   .option("--unit <unit>", "Unit label for progress (e.g. %, novels, lbs)", "%")
   .action(async function (this: Command) {
-    const userId = getUserId(this);
     const opts = this.opts();
-    const goal = await createGoal({
-      userId,
+    const goal = await apiPost<Goal>("/api/goals", {
       title: opts.title,
       description: opts.description ?? null,
-      targetDate: new Date(opts.targetDate),
+      targetDate: opts.targetDate,
       category: opts.category ?? null,
       objectiveId: opts.objectiveId ?? null,
       startValue: Number(opts.startValue),
       targetValue: Number(opts.targetValue),
       unit: opts.unit,
-      status: "not_started",
     });
-    if (!goal) {
-      console.error("Objective not found.");
-      process.exit(1);
-    }
     console.log(`Created goal: ${goal.id}`);
     console.log(`Title: ${goal.title}`);
   });
@@ -149,12 +124,11 @@ goalsCommand
   .option("--target-value <n>", "New target value")
   .option("--unit <unit>", "New unit label")
   .action(async function (this: Command, id: string) {
-    const userId = getUserId(this);
     const opts = this.opts();
     const data: Record<string, unknown> = {};
     if (opts.title) data.title = opts.title;
     if (opts.description) data.description = opts.description;
-    if (opts.targetDate) data.targetDate = new Date(opts.targetDate);
+    if (opts.targetDate) data.targetDate = opts.targetDate;
     if (opts.category) data.category = opts.category;
     if (opts.objectiveId) data.objectiveId = opts.objectiveId;
     if (opts.status) data.status = opts.status;
@@ -169,12 +143,7 @@ goalsCommand
       process.exit(1);
     }
 
-    const goal = await updateGoal(id, userId, data);
-    if (!goal) {
-      console.error("Goal or objective not found.");
-      process.exit(1);
-    }
-
+    const goal = await apiPatch<Goal>(`/api/goals/${id}`, data);
     console.log(`Updated goal: ${goal.id}`);
     console.log(`Title:  ${goal.title}`);
     console.log(`Status: ${formatStatus(goal.status)}`);
@@ -183,13 +152,8 @@ goalsCommand
 goalsCommand
   .command("delete <id>")
   .description("Delete a goal")
-  .action(async function (this: Command, id: string) {
-    const userId = getUserId(this);
-    const deleted = await deleteGoal(id, userId);
-    if (!deleted) {
-      console.error("Goal not found.");
-      process.exit(1);
-    }
+  .action(async (id: string) => {
+    await apiDelete(`/api/goals/${id}`);
     console.log("Goal deleted.");
   });
 
@@ -202,29 +166,22 @@ const progressCommand = goalsCommand
 progressCommand
   .command("list <goalId>")
   .description("List all progress updates for a goal")
-  .action(async function (this: Command, goalId: string) {
-    const userId = getUserId(this.parent!.parent!);
-    const updates = await getProgressUpdatesByGoalId(goalId, userId);
-    if (updates === null) {
-      console.error("Goal not found.");
-      process.exit(1);
-    }
+  .action(async (goalId: string) => {
+    const updates = await apiGet<ProgressUpdate[]>(
+      `/api/goals/${goalId}/progress-updates`
+    );
     if (updates.length === 0) {
       console.log("No progress updates yet.");
       return;
     }
-    const goal = await getGoalById(goalId, userId);
+    const goal = await apiGet<Goal>(`/api/goals/${goalId}`);
     printTable(
       ["ID", "Value", "%", "Occurred", "Note"],
       updates.map((u) => [
         u.id.slice(0, 8),
-        `${u.value}${goal?.unit ? ` ${goal.unit}` : ""}`,
-        `${
-          goal
-            ? calculateValueProgress(u.value, goal.startValue, goal.targetValue)
-            : 0
-        }%`,
-        formatDate(new Date(u.occurredAt)),
+        `${u.value}${goal.unit ? ` ${goal.unit}` : ""}`,
+        `${calculateValueProgress(u.value, goal.startValue, goal.targetValue)}%`,
+        formatDate(u.occurredAt),
         u.note ? u.note.slice(0, 40) : "—",
       ])
     );
@@ -240,62 +197,49 @@ progressCommand
     "When the progress happened (YYYY-MM-DD, defaults to today)"
   )
   .action(async function (this: Command, goalId: string) {
-    const userId = getUserId(this.parent!.parent!);
     const opts = this.opts();
-    const update = await createProgressUpdate(
+    const update = await apiPost<ProgressUpdate>(
+      `/api/goals/${goalId}/progress-updates`,
       {
-        goalId,
-        userId,
         value: Number(opts.value),
         note: opts.note ?? null,
-        occurredAt: opts.occurredAt ? new Date(opts.occurredAt) : new Date(),
-      },
-      userId
+        ...(opts.occurredAt ? { occurredAt: opts.occurredAt } : {}),
+      }
     );
-    if (!update) {
-      console.error("Goal not found.");
-      process.exit(1);
-    }
     console.log(`Logged progress update: ${update.id}`);
     console.log(`Value: ${update.value}`);
-    console.log(`Occurred: ${formatDate(new Date(update.occurredAt))}`);
+    console.log(`Occurred: ${formatDate(update.occurredAt)}`);
   });
 
 progressCommand
-  .command("update <id>")
+  .command("update <goalId> <updateId>")
   .description("Edit an existing progress update")
   .option("-v, --value <n>", "New value")
   .option("-n, --note <note>", "New note")
   .option("--occurred-at <date>", "New occurred-at date (YYYY-MM-DD)")
-  .action(async function (this: Command, id: string) {
-    const userId = getUserId(this.parent!.parent!);
+  .action(async function (this: Command, goalId: string, updateId: string) {
     const opts = this.opts();
-    const data: {
-      value?: number;
-      note?: string | null;
-      occurredAt?: Date;
-    } = {};
+    const data: Record<string, unknown> = {};
     if (opts.value !== undefined) data.value = Number(opts.value);
     if (opts.note !== undefined) data.note = opts.note;
-    if (opts.occurredAt) data.occurredAt = new Date(opts.occurredAt);
+    if (opts.occurredAt) data.occurredAt = opts.occurredAt;
 
-    const update = await updateProgressUpdate(id, userId, data);
-    if (!update) {
-      console.error("Progress update not found.");
+    if (Object.keys(data).length === 0) {
+      console.error("No fields to update.");
       process.exit(1);
     }
+
+    const update = await apiPatch<ProgressUpdate>(
+      `/api/goals/${goalId}/progress-updates/${updateId}`,
+      data
+    );
     console.log(`Updated progress update: ${update.id}`);
   });
 
 progressCommand
-  .command("delete <id>")
+  .command("delete <goalId> <updateId>")
   .description("Delete a progress update")
-  .action(async function (this: Command, id: string) {
-    const userId = getUserId(this.parent!.parent!);
-    const deleted = await deleteProgressUpdate(id, userId);
-    if (!deleted) {
-      console.error("Progress update not found.");
-      process.exit(1);
-    }
+  .action(async (goalId: string, updateId: string) => {
+    await apiDelete(`/api/goals/${goalId}/progress-updates/${updateId}`);
     console.log("Progress update deleted.");
   });
