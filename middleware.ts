@@ -24,6 +24,13 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
+  // The hosted MCP endpoint authenticates itself with a personal access token
+  // inside the handler (and accepts nothing else), so it must bypass
+  // session-based redirects.
+  if (req.nextUrl.pathname === "/mcp") {
+    return NextResponse.next();
+  }
+
   // Allow token-authenticated requests (per-user personal access tokens and
   // the legacy admin API key) through to the handler, but only on the data API
   // surface — never account management (settings, password) or auth endpoints,

@@ -4,6 +4,7 @@ import {
   clientIpFrom,
 } from "@/lib/rate-limit";
 import { db } from "@/lib/db";
+import { PgDialect } from "drizzle-orm/pg-core";
 
 jest.mock("@/lib/db", () => ({
   db: {
@@ -61,6 +62,37 @@ describe("recordRateLimitEvent", () => {
     await recordRateLimitEvent("signup:1.2.3.4", 60_000);
     expect(mockDb.insert).toHaveBeenCalled();
     expect(mockDb.delete).toHaveBeenCalled();
+  });
+
+  it("also prunes by age, so one-shot buckets can't accumulate", async () => {
+    const where = jest.fn().mockResolvedValue(undefined);
+    mockDb.delete.mockReturnValue({ where });
+
+    await recordRateLimitEvent("mcp-auth:1.2.3.4", 60_000);
+
+    const { sql, params } = new PgDialect().sqlToQuery(where.mock.calls[0][0]);
+    // Bucket-scoped window prune OR'd with an unscoped retention sweep.
+    expect(sql).toMatch(/\bor\b/i);
+    expect(sql.match(/"created_at" </g)).toHaveLength(2);
+    const seconds = (params.filter((p) => typeof p === "number") as number[])
+      .slice()
+      .sort((a, b) => a - b);
+    expect(seconds).toEqual([60, 24 * 60 * 60]);
+  });
+
+  it("measures windows with the database clock, not the app's", async () => {
+    // created_at is a naive timestamp: a JS-side Date would compare as UTC
+    // against whatever timezone Postgres wrote, expiring every row on write.
+    const where = jest.fn().mockResolvedValue([{ value: 0 }]);
+    mockDb.select.mockReturnValue({
+      from: jest.fn().mockReturnValue({ where }),
+    });
+
+    await isRateLimited("signin:a@b.c", 5, 60_000);
+
+    const { sql, params } = new PgDialect().sqlToQuery(where.mock.calls[0][0]);
+    expect(sql).toContain("now()");
+    expect(params).not.toContainEqual(expect.any(Date));
   });
 
   it("swallows database errors", async () => {
