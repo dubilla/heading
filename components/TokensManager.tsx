@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { TokenSummary } from "@/lib/db/tokens";
 import { TOKEN_EXPIRY_OPTIONS } from "@/lib/validations/token";
+import { McpConnect } from "@/components/McpConnect";
 
 const inputClass =
   "block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
@@ -23,8 +24,10 @@ function isExpired(expiresAt: Date | string | null): boolean {
 
 export function TokensManager({
   initialTokens,
+  origin,
 }: {
   initialTokens: TokenSummary[];
+  origin: string;
 }) {
   const [tokens, setTokens] = useState<TokenSummary[]>(initialTokens);
   const [name, setName] = useState("");
@@ -79,6 +82,10 @@ export function TokensManager({
         return;
       }
       setTokens((prev) => prev.filter((t) => t.id !== id));
+      // Don't leave runnable snippets on screen for a token that no longer works.
+      if (tokens.find((t) => t.id === id)?.last4 === newToken?.slice(-4)) {
+        setNewToken(null);
+      }
     } catch {
       setError("Something went wrong");
     } finally {
@@ -100,8 +107,8 @@ export function TokensManager({
   return (
     <div>
       <p className="text-sm text-gray-500 mb-4">
-        Tokens let the CLI and other tools act on your account over the API.
-        Keep them secret — treat a token like a password.
+        Tokens let the CLI, MCP clients, and other tools act on your account
+        over the API. Keep them secret — treat a token like a password.
       </p>
 
       {newToken && (
@@ -124,6 +131,9 @@ export function TokensManager({
             >
               {copied ? "Copied" : "Copy"}
             </button>
+          </div>
+          <div className="mt-4 border-t border-green-200 pt-4">
+            <McpConnect origin={origin} token={newToken} />
           </div>
         </div>
       )}
@@ -220,6 +230,12 @@ export function TokensManager({
             );
           })}
         </ul>
+      )}
+
+      {tokens.length > 0 && !newToken && (
+        <div className="mt-6 border-t border-gray-200 pt-6">
+          <McpConnect origin={origin} />
+        </div>
       )}
     </div>
   );

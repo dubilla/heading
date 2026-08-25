@@ -8,6 +8,7 @@ import {
   PasswordForm,
 } from "@/components/SettingsForms";
 import { TokensManager } from "@/components/TokensManager";
+import { requestOrigin } from "@/lib/request-origin";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export default async function SettingsPage() {
   const userId = session!.user!.id!;
   const user = await getUserById(userId);
   const tokens = await listTokensByUserId(userId);
+  const origin = await requestOrigin();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -52,7 +54,7 @@ export default async function SettingsPage() {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
             Personal Access Tokens
           </h2>
-          <TokensManager initialTokens={tokens} />
+          <TokensManager initialTokens={tokens} origin={origin} />
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

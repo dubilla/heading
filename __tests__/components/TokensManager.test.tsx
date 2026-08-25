@@ -23,7 +23,10 @@ beforeEach(() => {
 describe("TokensManager", () => {
   it("renders existing tokens with their last4 and a revoke control", () => {
     render(
-      <TokensManager initialTokens={[makeToken({ name: "my-laptop" })]} />
+      <TokensManager
+        initialTokens={[makeToken({ name: "my-laptop" })]}
+        origin="https://heading.test"
+      />
     );
 
     expect(screen.getByText("my-laptop")).toBeInTheDocument();
@@ -34,12 +37,12 @@ describe("TokensManager", () => {
   });
 
   it("shows the empty state with no tokens", () => {
-    render(<TokensManager initialTokens={[]} />);
+    render(<TokensManager initialTokens={[]} origin="https://heading.test" />);
     expect(screen.getByText("No tokens yet.")).toBeInTheDocument();
   });
 
   it("rejects generating without a name and never calls the API", async () => {
-    render(<TokensManager initialTokens={[]} />);
+    render(<TokensManager initialTokens={[]} origin="https://heading.test" />);
 
     fireEvent.click(screen.getByRole("button", { name: "Generate token" }));
 
@@ -60,7 +63,7 @@ describe("TokensManager", () => {
       }),
     });
 
-    render(<TokensManager initialTokens={[]} />);
+    render(<TokensManager initialTokens={[]} origin="https://heading.test" />);
 
     fireEvent.change(screen.getByLabelText("Token name"), {
       target: { value: "ci" },
@@ -92,7 +95,12 @@ describe("TokensManager", () => {
       json: async () => ({ data: { success: true } }),
     });
 
-    render(<TokensManager initialTokens={[makeToken({ name: "kill-me" })]} />);
+    render(
+      <TokensManager
+        initialTokens={[makeToken({ name: "kill-me" })]}
+        origin="https://heading.test"
+      />
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Revoke kill-me" }));
 
@@ -105,5 +113,133 @@ describe("TokensManager", () => {
     await waitFor(() =>
       expect(screen.queryByText("kill-me")).not.toBeInTheDocument()
     );
+  });
+});
+
+describe("MCP connect snippets", () => {
+  it("shows the connect section with the request origin once a token exists", () => {
+    render(
+      <TokensManager
+        initialTokens={[makeToken()]}
+        origin="https://heading.test"
+      />
+    );
+
+    expect(screen.getByText("Connect an MCP client")).toBeInTheDocument();
+    expect(
+      screen.getByText(/claude mcp add --transport http heading/)
+    ).toHaveTextContent("https://heading.test/mcp");
+  });
+
+  it("hides the connect section when there are no tokens", () => {
+    render(<TokensManager initialTokens={[]} origin="https://heading.test" />);
+
+    expect(screen.queryByText("Connect an MCP client")).not.toBeInTheDocument();
+  });
+
+  it("uses a placeholder rather than a real token in the steady state", () => {
+    render(
+      <TokensManager
+        initialTokens={[makeToken()]}
+        origin="https://heading.test"
+      />
+    );
+
+    expect(
+      screen.getByText(/claude mcp add --transport http heading/)
+    ).toHaveTextContent("Bearer hd_your_token_here");
+  });
+
+  it("embeds the plaintext token in the snippets right after creation", async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          token: "hd_the_secret_value",
+          record: makeToken({ id: "tok-3", name: "desktop" }),
+        },
+      }),
+    });
+
+    render(<TokensManager initialTokens={[]} origin="https://heading.test" />);
+
+    fireEvent.change(screen.getByLabelText("Token name"), {
+      target: { value: "desktop" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Generate token" }));
+
+    const cli = await screen.findByText(
+      /claude mcp add --transport http heading/
+    );
+    expect(cli).toHaveTextContent("Bearer hd_the_secret_value");
+    expect(cli).not.toHaveTextContent("hd_your_token_here");
+
+    // The Claude Desktop config carries the same token.
+    expect(screen.getByText(/"mcpServers"/)).toHaveTextContent(
+      "Bearer hd_the_secret_value"
+    );
+  });
+
+  it("copies a snippet to the clipboard", async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    const original = navigator.clipboard;
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+
+    render(
+      <TokensManager
+        initialTokens={[makeToken()]}
+        origin="https://heading.test"
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Copy Claude Code snippet to clipboard",
+      })
+    );
+
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(
+        expect.stringContaining("https://heading.test/mcp")
+      )
+    );
+
+    Object.defineProperty(navigator, "clipboard", {
+      value: original,
+      configurable: true,
+    });
+  });
+
+  it("shows only one set of snippets while the new token is revealed", async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          token: "hd_the_secret_value",
+          record: makeToken({ id: "tok-4", name: "second" }),
+        },
+      }),
+    });
+
+    render(
+      <TokensManager
+        initialTokens={[makeToken()]}
+        origin="https://heading.test"
+      />
+    );
+
+    expect(screen.getAllByText("Connect an MCP client")).toHaveLength(1);
+
+    fireEvent.change(screen.getByLabelText("Token name"), {
+      target: { value: "second" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Generate token" }));
+
+    await waitFor(() => expect(screen.getByRole("status")).toBeInTheDocument());
+    // The steady-state section is suppressed rather than duplicated.
+    expect(screen.getAllByText("Connect an MCP client")).toHaveLength(1);
   });
 });
