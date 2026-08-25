@@ -20,6 +20,44 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Remote MCP
+
+Heading serves a hosted [MCP](https://modelcontextprotocol.io) endpoint at `POST /mcp`, so any MCP client can read and update your objectives, goals, milestones, todos, and progress updates against the deployed app — no local checkout required.
+
+Authentication is a personal access token, minted from **Settings → Tokens**. Session cookies and the shared admin API key are deliberately not accepted on this surface. The Tokens page shows both snippets below with your origin filled in, and with the token itself filled in during the one moment it is visible after minting.
+
+Claude Code:
+
+```bash
+claude mcp add --transport http heading https://<your-host>/mcp --header "Authorization: Bearer hd_your_token_here"
+```
+
+Claude Desktop (`claude_desktop_config.json`) — Desktop only launches stdio servers from its config, so a remote endpoint goes through the [`mcp-remote`](https://github.com/geelen/mcp-remote) bridge:
+
+```json
+{
+  "mcpServers": {
+    "heading": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://<your-host>/mcp",
+        "--header",
+        "Authorization:${AUTH_HEADER}"
+      ],
+      "env": { "AUTH_HEADER": "Bearer hd_your_token_here" }
+    }
+  }
+}
+```
+
+The header name is passed without a trailing space and the value carried in `env` on purpose: several clients don't escape spaces inside `args`, which mangles the token.
+
+Custom connectors on claude.ai web are **not** supported — they require OAuth, and this endpoint authenticates with tokens only. Clients that send custom headers work directly.
+
+The same tools are also available over stdio for local use: `HEADING_USER_ID=<id> npm run mcp`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
