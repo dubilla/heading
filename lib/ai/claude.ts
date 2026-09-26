@@ -102,7 +102,8 @@ Current Date: ${new Date().toISOString().split("T")[0]}
 
   try {
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-5",
+      thinking: { type: "disabled" },
       max_tokens: 2000,
       system: SYSTEM_PROMPT + "\n\n" + goalContext,
       messages: messages.map((m) => ({
