@@ -51,7 +51,10 @@ function toCrewDate(date: Date): string {
  * `assignee: "user"` is required: it makes the task user-completable in Crew
  * and keeps Crew from handing it to an agent.
  */
-export async function createCrewTask(todo: Todo): Promise<string | null> {
+export async function createCrewTask(
+  todo: Todo,
+  goal?: { id: string; title: string }
+): Promise<string | null> {
   const config = crewConfig();
   if (!config) return null;
 
@@ -69,6 +72,8 @@ export async function createCrewTask(todo: Todo): Promise<string | null> {
         assignee: "user",
         externalSource: EXTERNAL_SOURCE,
         externalId: todo.id,
+        // Crew caches the goal identity for display on goal-linked tasks.
+        ...(goal ? { goalId: goal.id, goalTitle: goal.title } : {}),
       }),
     });
 
@@ -131,7 +136,8 @@ export async function searchCrewTasks(
  */
 export async function linkCrewTask(
   crewTaskId: string,
-  headingTodoId: string
+  headingTodoId: string,
+  goal?: { id: string; title: string }
 ): Promise<"ok" | "conflict" | "error"> {
   const config = crewConfig();
   if (!config) return "error";
@@ -148,6 +154,9 @@ export async function linkCrewTask(
         body: JSON.stringify({
           externalSource: EXTERNAL_SOURCE,
           externalId: headingTodoId,
+          // Crew caches the goal identity for display (task cards show which
+          // goal a task ladders up to), replacing the pair as a unit.
+          ...(goal ? { goalId: goal.id, goalTitle: goal.title } : {}),
         }),
       }
     );
